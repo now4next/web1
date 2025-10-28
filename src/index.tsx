@@ -321,7 +321,7 @@ app.get('/', (c) => {
         <title>AI 역량 진단 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="/static/style.css" rel="stylesheet">
+        <link href="/static/style.css?v=2" rel="stylesheet">
     </head>
     <body class="bg-gray-50">
         <!-- Navigation -->
@@ -487,7 +487,7 @@ app.get('/', (c) => {
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app.js"></script>
+        <script src="/static/app.js?v=2"></script>
     </body>
     </html>
   `)
