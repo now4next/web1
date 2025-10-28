@@ -228,6 +228,27 @@ app.post('/api/session-competencies', async (c) => {
   return c.json({ success: true, id: result.meta.last_row_id })
 })
 
+// 진단 문항 목록 조회 (진단 실행용)
+app.get('/api/assessment-questions', async (c) => {
+  const db = c.env.DB
+  const { results } = await db.prepare(`
+    SELECT 
+      aq.id,
+      aq.question_text,
+      aq.question_type,
+      aq.scale_type,
+      c.keyword as competency,
+      c.description as competency_description,
+      cm.name as model_name
+    FROM assessment_questions aq
+    JOIN competencies c ON aq.competency_id = c.id
+    JOIN competency_models cm ON c.model_id = cm.id
+    ORDER BY cm.name, c.keyword, aq.id
+  `).all()
+  
+  return c.json({ success: true, data: results, count: results.length })
+})
+
 // 문항 저장 (키워드 기반)
 app.post('/api/assessment-questions-save', async (c) => {
   const db = c.env.DB
@@ -587,6 +608,9 @@ app.get('/', (c) => {
                         <button onclick="showTab('assess')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
                             <i class="fas fa-clipboard-list mr-2"></i>진단 설계
                         </button>
+                        <button onclick="showTab('execute')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
+                            <i class="fas fa-pen-to-square mr-2"></i>진단 실행
+                        </button>
                         <button onclick="showTab('analytics')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
                             <i class="fas fa-chart-bar mr-2"></i>분석
                         </button>
@@ -672,6 +696,166 @@ app.get('/', (c) => {
                     <div id="generation-result" class="hidden">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">생성된 진단 문항</h3>
                         <div id="generation-content" class="bg-gray-50 rounded-lg p-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXECUTE Tab (진단 실행) -->
+            <div id="tab-execute" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-pen-to-square text-purple-600 mr-2"></i>
+                        진단 실행
+                    </h2>
+                    
+                    <!-- Step 1: 응답자 기본 정보 -->
+                    <div id="respondent-info-section" class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">1</span>
+                            응답자 정보 입력
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">이름 *</label>
+                                <input 
+                                    type="text" 
+                                    id="exec-name" 
+                                    placeholder="홍길동"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">이메일 *</label>
+                                <input 
+                                    type="email" 
+                                    id="exec-email" 
+                                    placeholder="hong@example.com"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">부서</label>
+                                <input 
+                                    type="text" 
+                                    id="exec-department" 
+                                    placeholder="전략기획팀"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">직위</label>
+                                <input 
+                                    type="text" 
+                                    id="exec-position" 
+                                    placeholder="과장"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
+                                <select id="exec-level" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="junior">사원/대리</option>
+                                    <option value="senior">과장/차장</option>
+                                    <option value="manager">팀장 이상</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: 진단 문항 디스플레이 설정 -->
+                    <div id="display-settings-section" class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
+                            진단 문항 디스플레이 설정
+                        </h3>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                                <div>
+                                    <p class="text-sm text-blue-800 mb-2">
+                                        <strong>한 화면에 표시할 문항 수를 선택하세요</strong>
+                                    </p>
+                                    <ul class="text-xs text-blue-700 space-y-1">
+                                        <li>• <strong>1개씩</strong>: 집중력 향상, 한 문항씩 신중하게 응답</li>
+                                        <li>• <strong>5개씩</strong>: 적절한 속도감, 역량별 그룹 단위 응답</li>
+                                        <li>• <strong>10개씩</strong>: 빠른 진행, 여러 문항 비교하며 응답</li>
+                                        <li>• <strong>전체</strong>: 모든 문항을 한눈에 보고 응답</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <button onclick="setQuestionDisplay(1)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-700">1개씩</div>
+                                    <div class="text-xs text-gray-500 mt-1">집중 모드</div>
+                                </div>
+                            </button>
+                            <button onclick="setQuestionDisplay(5)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-700">5개씩</div>
+                                    <div class="text-xs text-gray-500 mt-1">표준 모드</div>
+                                </div>
+                            </button>
+                            <button onclick="setQuestionDisplay(10)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-700">10개씩</div>
+                                    <div class="text-xs text-gray-500 mt-1">빠른 모드</div>
+                                </div>
+                            </button>
+                            <button onclick="setQuestionDisplay(-1)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-700">전체</div>
+                                    <div class="text-xs text-gray-500 mt-1">전체 보기</div>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <div id="selected-display" class="mt-4 text-center text-sm text-gray-600">
+                            선택된 디스플레이: <span class="font-semibold text-blue-600">미선택</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: 진단 시작 버튼 -->
+                    <div class="flex justify-center">
+                        <button onclick="startAssessment()" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled id="start-assessment-btn">
+                            <i class="fas fa-play mr-2"></i>진단 시작
+                        </button>
+                    </div>
+
+                    <!-- 진단 문항 영역 (동적 생성) -->
+                    <div id="assessment-questions-area" class="mt-8 hidden">
+                        <div class="border-t pt-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold text-gray-800">
+                                    진단 문항
+                                </h3>
+                                <div class="text-sm text-gray-600">
+                                    <span id="current-progress">0</span> / <span id="total-questions">0</span> 문항
+                                </div>
+                            </div>
+                            
+                            <!-- 문항 컨테이너 -->
+                            <div id="questions-container" class="space-y-6">
+                                <!-- 동적으로 생성됨 -->
+                            </div>
+
+                            <!-- 네비게이션 버튼 -->
+                            <div class="flex justify-between mt-8">
+                                <button onclick="previousPage()" id="prev-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    <i class="fas fa-chevron-left mr-2"></i>이전
+                                </button>
+                                <button onclick="nextPage()" id="next-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    다음<i class="fas fa-chevron-right ml-2"></i>
+                                </button>
+                                <button onclick="submitAssessment()" id="submit-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hidden">
+                                    <i class="fas fa-check mr-2"></i>제출하기
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1060,3 +1060,403 @@ window.showTab = function(tabName) {
     loadRespondents()
   }
 }
+
+// ============================================================================
+// 진단 실행 (Execute Assessment)
+// ============================================================================
+
+// 전역 변수
+let assessmentQuestions = []
+let currentPage = 0
+let questionsPerPage = 5  // 기본값
+let assessmentResponses = []
+let currentRespondentInfo = null
+
+// 문항 디스플레이 설정
+function setQuestionDisplay(count) {
+  questionsPerPage = count
+  
+  // 버튼 스타일 업데이트
+  document.querySelectorAll('.display-btn').forEach(btn => {
+    btn.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200')
+    btn.classList.add('border-gray-300')
+  })
+  event.target.closest('button').classList.remove('border-gray-300')
+  event.target.closest('button').classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200')
+  
+  // 선택된 옵션 표시
+  const displayText = count === -1 ? '전체' : `${count}개씩`
+  document.getElementById('selected-display').innerHTML = `
+    선택된 디스플레이: <span class="font-semibold text-blue-600">${displayText}</span>
+  `
+  
+  // 진단 시작 버튼 활성화
+  checkStartButtonState()
+}
+
+// 진단 시작 버튼 상태 체크
+function checkStartButtonState() {
+  const name = document.getElementById('exec-name').value.trim()
+  const email = document.getElementById('exec-email').value.trim()
+  const hasDisplay = questionsPerPage !== null
+  
+  const startBtn = document.getElementById('start-assessment-btn')
+  if (name && email && hasDisplay) {
+    startBtn.disabled = false
+    startBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+  } else {
+    startBtn.disabled = true
+    startBtn.classList.add('opacity-50', 'cursor-not-allowed')
+  }
+}
+
+// 입력 필드 변경 감지
+document.addEventListener('DOMContentLoaded', () => {
+  const nameInput = document.getElementById('exec-name')
+  const emailInput = document.getElementById('exec-email')
+  
+  if (nameInput) nameInput.addEventListener('input', checkStartButtonState)
+  if (emailInput) emailInput.addEventListener('input', checkStartButtonState)
+})
+
+// 진단 시작
+async function startAssessment() {
+  const name = document.getElementById('exec-name').value.trim()
+  const email = document.getElementById('exec-email').value.trim()
+  const department = document.getElementById('exec-department').value.trim()
+  const position = document.getElementById('exec-position').value.trim()
+  const level = document.getElementById('exec-level').value
+  
+  if (!name || !email) {
+    alert('이름과 이메일은 필수 입력 항목입니다')
+    return
+  }
+  
+  // 응답자 정보 저장
+  currentRespondentInfo = {
+    name, email, department, position, level
+  }
+  
+  try {
+    // 진단 문항 로드
+    const response = await axios.get('/api/assessment-questions')
+    
+    if (!response.data.success || response.data.count === 0) {
+      alert('진단 문항이 없습니다. 먼저 진단 설계 탭에서 문항을 생성하세요.')
+      return
+    }
+    
+    assessmentQuestions = response.data.data
+    assessmentResponses = new Array(assessmentQuestions.length).fill(null)
+    currentPage = 0
+    
+    // 진단 영역 표시
+    document.getElementById('respondent-info-section').style.display = 'none'
+    document.getElementById('display-settings-section').style.display = 'none'
+    document.querySelector('#tab-execute .flex.justify-center').style.display = 'none'
+    document.getElementById('assessment-questions-area').classList.remove('hidden')
+    
+    // 총 문항 수 표시
+    document.getElementById('total-questions').textContent = assessmentQuestions.length
+    
+    // 첫 페이지 렌더링
+    renderQuestionsPage()
+    
+  } catch (error) {
+    console.error('Error starting assessment:', error)
+    alert('진단을 시작하는 중 오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
+  }
+}
+
+// 문항 페이지 렌더링
+function renderQuestionsPage() {
+  const container = document.getElementById('questions-container')
+  
+  // 페이지에 표시할 문항 계산
+  let startIdx, endIdx
+  
+  if (questionsPerPage === -1) {
+    // 전체 표시
+    startIdx = 0
+    endIdx = assessmentQuestions.length
+  } else {
+    startIdx = currentPage * questionsPerPage
+    endIdx = Math.min(startIdx + questionsPerPage, assessmentQuestions.length)
+  }
+  
+  const pageQuestions = assessmentQuestions.slice(startIdx, endIdx)
+  
+  // 문항 HTML 생성
+  container.innerHTML = pageQuestions.map((q, localIdx) => {
+    const globalIdx = startIdx + localIdx
+    const currentResponse = assessmentResponses[globalIdx]
+    
+    return `
+      <div class="border rounded-lg p-6 bg-white" data-question-idx="${globalIdx}">
+        <!-- 문항 헤더 -->
+        <div class="mb-4">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex-1">
+              <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded mb-2">
+                ${q.competency}
+              </span>
+              <h4 class="text-lg font-medium text-gray-800">
+                Q${globalIdx + 1}. ${q.question_text}
+              </h4>
+            </div>
+            ${currentResponse !== null ? `
+              <span class="ml-4 flex-shrink-0 px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded">
+                <i class="fas fa-check mr-1"></i>응답 완료
+              </span>
+            ` : ''}
+          </div>
+        </div>
+        
+        <!-- 응답 척도 (5점 리커트) -->
+        <div class="space-y-2">
+          <div class="grid grid-cols-5 gap-2">
+            ${[1, 2, 3, 4, 5].map(value => `
+              <button 
+                onclick="selectAnswer(${globalIdx}, ${value})"
+                class="response-btn py-4 border-2 rounded-lg transition-all ${
+                  currentResponse === value 
+                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                }">
+                <div class="text-2xl font-bold text-gray-700">${value}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  ${value === 1 ? '전혀<br>그렇지 않다' : 
+                    value === 2 ? '그렇지<br>않다' : 
+                    value === 3 ? '보통<br>이다' : 
+                    value === 4 ? '그렇다' : 
+                    '매우<br>그렇다'}
+                </div>
+              </button>
+            `).join('')}
+          </div>
+          <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>전혀 그렇지 않다</span>
+            <span>매우 그렇다</span>
+          </div>
+        </div>
+      </div>
+    `
+  }).join('')
+  
+  // 진행률 업데이트
+  updateProgress()
+  
+  // 네비게이션 버튼 상태 업데이트
+  updateNavigationButtons()
+}
+
+// 응답 선택
+function selectAnswer(questionIdx, value) {
+  assessmentResponses[questionIdx] = value
+  
+  // 해당 문항 버튼 스타일 업데이트
+  const questionDiv = document.querySelector(`[data-question-idx="${questionIdx}"]`)
+  if (questionDiv) {
+    questionDiv.querySelectorAll('.response-btn').forEach((btn, idx) => {
+      if (idx + 1 === value) {
+        btn.classList.remove('border-gray-300', 'hover:border-blue-400')
+        btn.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200')
+      } else {
+        btn.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200')
+        btn.classList.add('border-gray-300', 'hover:border-blue-400')
+      }
+    })
+    
+    // 응답 완료 표시 추가/업데이트
+    const existingBadge = questionDiv.querySelector('.bg-green-100')
+    if (!existingBadge) {
+      const headerDiv = questionDiv.querySelector('.flex.items-start.justify-between')
+      headerDiv.insertAdjacentHTML('beforeend', `
+        <span class="ml-4 flex-shrink-0 px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded">
+          <i class="fas fa-check mr-1"></i>응답 완료
+        </span>
+      `)
+    }
+  }
+  
+  // 진행률 업데이트
+  updateProgress()
+  
+  // 네비게이션 버튼 업데이트
+  updateNavigationButtons()
+}
+
+// 진행률 업데이트
+function updateProgress() {
+  const answeredCount = assessmentResponses.filter(r => r !== null).length
+  document.getElementById('current-progress').textContent = answeredCount
+}
+
+// 네비게이션 버튼 상태 업데이트
+function updateNavigationButtons() {
+  const prevBtn = document.getElementById('prev-btn')
+  const nextBtn = document.getElementById('next-btn')
+  const submitBtn = document.getElementById('submit-btn')
+  
+  // 전체 표시 모드인 경우
+  if (questionsPerPage === -1) {
+    prevBtn.classList.add('hidden')
+    nextBtn.classList.add('hidden')
+    
+    // 모든 문항에 응답했는지 체크
+    const allAnswered = assessmentResponses.every(r => r !== null)
+    if (allAnswered) {
+      submitBtn.classList.remove('hidden')
+    } else {
+      submitBtn.classList.add('hidden')
+    }
+    return
+  }
+  
+  // 페이지 모드
+  const totalPages = Math.ceil(assessmentQuestions.length / questionsPerPage)
+  const isFirstPage = currentPage === 0
+  const isLastPage = currentPage === totalPages - 1
+  
+  // 이전 버튼
+  if (isFirstPage) {
+    prevBtn.disabled = true
+    prevBtn.classList.add('opacity-50', 'cursor-not-allowed')
+  } else {
+    prevBtn.disabled = false
+    prevBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+  }
+  
+  // 다음/제출 버튼
+  if (isLastPage) {
+    // 현재 페이지의 모든 문항에 응답했는지 체크
+    const startIdx = currentPage * questionsPerPage
+    const endIdx = Math.min(startIdx + questionsPerPage, assessmentQuestions.length)
+    const allAnswered = assessmentResponses.every(r => r !== null)
+    
+    nextBtn.classList.add('hidden')
+    
+    if (allAnswered) {
+      submitBtn.classList.remove('hidden')
+    } else {
+      submitBtn.classList.add('hidden')
+    }
+  } else {
+    nextBtn.classList.remove('hidden')
+    submitBtn.classList.add('hidden')
+    
+    // 현재 페이지의 문항에 응답이 있는지 체크
+    const startIdx = currentPage * questionsPerPage
+    const endIdx = Math.min(startIdx + questionsPerPage, assessmentQuestions.length)
+    const pageAnswered = assessmentResponses.slice(startIdx, endIdx).some(r => r !== null)
+    
+    nextBtn.disabled = false
+    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+  }
+}
+
+// 이전 페이지
+function previousPage() {
+  if (currentPage > 0) {
+    currentPage--
+    renderQuestionsPage()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+// 다음 페이지
+function nextPage() {
+  const totalPages = Math.ceil(assessmentQuestions.length / questionsPerPage)
+  if (currentPage < totalPages - 1) {
+    currentPage++
+    renderQuestionsPage()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+// 진단 제출
+async function submitAssessment() {
+  // 모든 문항에 응답했는지 확인
+  const unanswered = assessmentResponses.filter(r => r === null).length
+  if (unanswered > 0) {
+    alert(`아직 ${unanswered}개의 문항에 응답하지 않았습니다. 모든 문항에 응답해주세요.`)
+    return
+  }
+  
+  if (!confirm('진단을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.')) {
+    return
+  }
+  
+  try {
+    // 응답자 등록
+    const respResponse = await axios.post('/api/respondents', {
+      name: currentRespondentInfo.name,
+      email: currentRespondentInfo.email,
+      department: currentRespondentInfo.department,
+      position: currentRespondentInfo.position,
+      level: currentRespondentInfo.level
+    })
+    
+    const respondentId = respResponse.data.id
+    
+    // 진단 세션 생성
+    const sessionResponse = await axios.post('/api/assessment-sessions', {
+      session_name: `${currentRespondentInfo.name}의 진단 (${new Date().toLocaleDateString()})`,
+      session_type: 'self',
+      target_level: currentRespondentInfo.level,
+      status: 'completed'
+    })
+    
+    const sessionId = sessionResponse.data.id
+    
+    // 응답 저장
+    for (let i = 0; i < assessmentQuestions.length; i++) {
+      await axios.post('/api/assessment-responses', {
+        session_id: sessionId,
+        respondent_id: respondentId,
+        question_id: assessmentQuestions[i].id,
+        response_value: assessmentResponses[i]
+      })
+    }
+    
+    // 완료 메시지
+    const avgScore = (assessmentResponses.reduce((sum, val) => sum + val, 0) / assessmentResponses.length).toFixed(2)
+    
+    const container = document.getElementById('questions-container')
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <i class="fas fa-check-circle text-6xl text-green-600 mb-4"></i>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2">진단이 완료되었습니다!</h3>
+        <p class="text-gray-600 mb-6">응답해 주셔서 감사합니다.</p>
+        
+        <div class="bg-gray-50 rounded-lg p-6 mb-6 inline-block text-left">
+          <h4 class="font-semibold text-gray-800 mb-3">응답 요약</h4>
+          <div class="space-y-2 text-sm text-gray-600">
+            <p><strong>응답자:</strong> ${currentRespondentInfo.name}</p>
+            <p><strong>이메일:</strong> ${currentRespondentInfo.email}</p>
+            <p><strong>총 문항 수:</strong> ${assessmentQuestions.length}개</p>
+            <p><strong>평균 점수:</strong> ${avgScore}점</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 justify-center">
+          <button onclick="showTab('analytics')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <i class="fas fa-chart-bar mr-2"></i>분석 결과 보기
+          </button>
+          <button onclick="location.reload()" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+            <i class="fas fa-home mr-2"></i>처음으로
+          </button>
+        </div>
+      </div>
+    `
+    
+    // 네비게이션 버튼 숨기기
+    document.getElementById('prev-btn').style.display = 'none'
+    document.getElementById('next-btn').style.display = 'none'
+    document.getElementById('submit-btn').style.display = 'none'
+    
+  } catch (error) {
+    console.error('Error submitting assessment:', error)
+    alert('진단 제출 중 오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
+  }
+}
