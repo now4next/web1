@@ -215,6 +215,82 @@ app.get('/api/assessment-sessions', async (c) => {
   return c.json({ success: true, data: results })
 })
 
+// 세션-역량 매핑
+app.post('/api/session-competencies', async (c) => {
+  const db = c.env.DB
+  const body = await c.req.json()
+  
+  const result = await db.prepare(`
+    INSERT INTO session_competencies (session_id, competency_id)
+    VALUES (?, ?)
+  `).bind(body.session_id, body.competency_id).run()
+  
+  return c.json({ success: true, id: result.meta.last_row_id })
+})
+
+// 문항 저장 (키워드 기반)
+app.post('/api/assessment-questions-save', async (c) => {
+  const db = c.env.DB
+  const body = await c.req.json()
+  
+  // 역량 키워드로 competency_id 찾기
+  const competency = await db.prepare(`
+    SELECT id FROM competencies WHERE keyword = ?
+  `).bind(body.competency_keyword).first()
+  
+  if (!competency) {
+    return c.json({ success: false, error: '역량을 찾을 수 없습니다' }, 404)
+  }
+  
+  const result = await db.prepare(`
+    INSERT INTO assessment_questions (competency_id, question_text, question_type)
+    VALUES (?, ?, ?)
+  `).bind(competency.id, body.question_text, body.question_type).run()
+  
+  return c.json({ success: true, id: result.meta.last_row_id })
+})
+
+// 진단 응답 저장
+app.post('/api/assessment-responses', async (c) => {
+  const db = c.env.DB
+  const body = await c.req.json()
+  
+  // 먼저 해당 문항 ID를 찾거나 생성
+  let questionId = body.question_id
+  
+  if (!questionId) {
+    // 문항 텍스트로 검색
+    const existingQuestion = await db.prepare(`
+      SELECT id FROM assessment_questions WHERE question_text = ?
+    `).bind(body.question_text).first()
+    
+    if (existingQuestion) {
+      questionId = existingQuestion.id
+    } else {
+      // 역량으로 competency_id 찾기
+      const competency = await db.prepare(`
+        SELECT id FROM competencies WHERE keyword = ?
+      `).bind(body.competency).first()
+      
+      if (competency) {
+        const newQuestion = await db.prepare(`
+          INSERT INTO assessment_questions (competency_id, question_text, question_type)
+          VALUES (?, ?, ?)
+        `).bind(competency.id, body.question_text, 'self').run()
+        
+        questionId = newQuestion.meta.last_row_id
+      }
+    }
+  }
+  
+  const result = await db.prepare(`
+    INSERT INTO assessment_responses (session_id, respondent_id, question_id, response_value)
+    VALUES (?, ?, ?, ?)
+  `).bind(body.session_id, body.respondent_id, questionId, body.response_value).run()
+  
+  return c.json({ success: true, id: result.meta.last_row_id })
+})
+
 // 응답자 등록
 app.post('/api/respondents', async (c) => {
   const db = c.env.DB
