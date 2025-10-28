@@ -132,6 +132,8 @@ async function generateQuestions() {
       competency_keywords: selectedCompetencies.map(c => c.keyword),
       target_level: targetLevel,
       question_type: questionType
+    }, {
+      timeout: 60000 // 60초 타임아웃
     })
     
     if (response.data.success) {
@@ -218,11 +220,15 @@ async function generateQuestions() {
     }
   } catch (error) {
     console.error('Error generating questions:', error)
+    const errorDetail = error.response?.data?.error || error.message || '알 수 없는 오류'
     contentDiv.innerHTML = `
       <div class="text-center py-8">
         <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
         <p class="text-red-600">문항 생성 중 오류가 발생했습니다</p>
-        <p class="text-gray-500 text-sm mt-2">${error.message}</p>
+        <p class="text-gray-500 text-sm mt-2">${errorDetail}</p>
+        <button onclick="generateQuestions()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fas fa-redo mr-2"></i>다시 시도
+        </button>
       </div>
     `
   }
@@ -261,6 +267,8 @@ async function sendChatMessage() {
         },
         ...chatMessages
       ]
+    }, {
+      timeout: 60000 // 60초 타임아웃
     })
     
     if (response.data.success) {
@@ -271,7 +279,8 @@ async function sendChatMessage() {
     }
   } catch (error) {
     console.error('Error sending chat message:', error)
-    alert('메시지 전송 중 오류가 발생했습니다')
+    const errorDetail = error.response?.data?.error || error.message || '알 수 없는 오류'
+    alert(`메시지 전송 중 오류가 발생했습니다: ${errorDetail}`)
   }
 }
 

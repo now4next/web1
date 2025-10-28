@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>API 직접 테스트</h1>
+    <button onclick="testAPI()">AI 문항 생성 테스트</button>
+    <div id="result" style="margin-top: 20px; white-space: pre-wrap; font-family: monospace;"></div>
+    
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '테스트 중...';
+            
+            try {
+                const response = await axios.post('/api/ai/generate-questions', {
+                    competency_keywords: ['커뮤니케이션'],
+                    target_level: 'manager',
+                    question_type: 'self'
+                }, {
+                    timeout: 60000
+                });
+                
+                resultDiv.textContent = JSON.stringify(response.data, null, 2);
+            } catch (error) {
+                resultDiv.textContent = `에러 발생:\n${error.message}\n\n` +
+                    `Response: ${JSON.stringify(error.response?.data, null, 2)}`;
+            }
+        }
+    </script>
+</body>
+</html>
