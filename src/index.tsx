@@ -762,6 +762,34 @@ app.get('/', (c) => {
                                 </select>
                             </div>
                         </div>
+                        
+                        <!-- 응답 척도 설정 -->
+                        <div class="mt-6 border-t pt-6">
+                            <h4 class="text-md font-semibold text-gray-800 mb-4">
+                                <i class="fas fa-sliders-h text-purple-600 mr-2"></i>응답 척도 설정
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">척도 유형 *</label>
+                                    <select id="scale-type" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="updateScaleLabels()">
+                                        <option value="binary">2점 척도 (예/아니오, O/X)</option>
+                                        <option value="3-point">3점 척도</option>
+                                        <option value="5-point" selected>5점 척도 (리커트)</option>
+                                        <option value="7-point">7점 척도</option>
+                                        <option value="10-point">10점 척도</option>
+                                        <option value="single">1점 (체크리스트)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 척도 레이블 설정 -->
+                            <div id="scale-labels-container" class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-sm text-gray-600 mb-3">각 척도 숫자에 대한 의미를 설정하세요</p>
+                                <div id="scale-labels-grid" class="grid grid-cols-1 gap-3">
+                                    <!-- 동적으로 생성됨 -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Step 2: 진단 문항 디스플레이 설정 -->

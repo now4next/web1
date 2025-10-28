@@ -1071,6 +1071,108 @@ let currentPage = 0
 let questionsPerPage = 5  // 기본값
 let assessmentResponses = []
 let currentRespondentInfo = null
+let scaleConfig = {
+  type: '5-point',
+  labels: ['전혀 그렇지 않다', '그렇지 않다', '보통이다', '그렇다', '매우 그렇다']
+}
+
+// 척도 레이블 업데이트
+function updateScaleLabels() {
+  const scaleType = document.getElementById('scale-type').value
+  const container = document.getElementById('scale-labels-grid')
+  
+  let defaultLabels = []
+  let scaleCount = 0
+  
+  switch(scaleType) {
+    case 'single':
+      scaleCount = 1
+      defaultLabels = ['확인']
+      break
+    case 'binary':
+      scaleCount = 2
+      defaultLabels = ['아니오 (X)', '예 (O)']
+      break
+    case '3-point':
+      scaleCount = 3
+      defaultLabels = ['낮음', '보통', '높음']
+      break
+    case '5-point':
+      scaleCount = 5
+      defaultLabels = ['전혀 그렇지 않다', '그렇지 않다', '보통이다', '그렇다', '매우 그렇다']
+      break
+    case '7-point':
+      scaleCount = 7
+      defaultLabels = ['매우 그렇지 않다', '그렇지 않다', '약간 그렇지 않다', '보통', '약간 그렇다', '그렇다', '매우 그렇다']
+      break
+    case '10-point':
+      scaleCount = 10
+      defaultLabels = Array.from({length: 10}, (_, i) => `${i + 1}점`)
+      break
+  }
+  
+  scaleConfig.type = scaleType
+  scaleConfig.labels = defaultLabels
+  
+  container.innerHTML = defaultLabels.map((label, idx) => `
+    <div class="flex items-center gap-3">
+      <span class="flex-shrink-0 w-12 text-center font-semibold text-gray-700 bg-white rounded px-2 py-1 border">
+        ${idx + 1}
+      </span>
+      <input 
+        type="text" 
+        value="${label}"
+        placeholder="척도 ${idx + 1}의 의미"
+        class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        onchange="updateScaleLabel(${idx}, this.value)"
+      >
+    </div>
+  `).join('')
+}
+
+// 개별 척도 레이블 업데이트
+function updateScaleLabel(index, value) {
+  scaleConfig.labels[index] = value
+}
+
+// 척도 버튼 렌더링
+function renderScaleButtons(questionIdx, currentResponse) {
+  const scaleCount = scaleConfig.labels.length
+  const labels = scaleConfig.labels
+  
+  // 그리드 컬럼 수 결정
+  let gridCols = 'grid-cols-5'
+  if (scaleCount === 1) gridCols = 'grid-cols-1'
+  else if (scaleCount === 2) gridCols = 'grid-cols-2'
+  else if (scaleCount === 3) gridCols = 'grid-cols-3'
+  else if (scaleCount === 7) gridCols = 'grid-cols-7'
+  else if (scaleCount === 10) gridCols = 'grid-cols-5'
+  
+  return `
+    <div class="grid ${gridCols} gap-2">
+      ${Array.from({length: scaleCount}, (_, i) => i + 1).map(value => `
+        <button 
+          onclick="selectAnswer(${questionIdx}, ${value})"
+          class="response-btn py-4 border-2 rounded-lg transition-all ${
+            currentResponse === value 
+              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+              : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+          }">
+          <div class="text-2xl font-bold text-gray-700">${value}</div>
+          <div class="text-xs text-gray-500 mt-1 px-1">
+            ${labels[value - 1] ? labels[value - 1].replace(/\n/g, '<br>') : ''}
+          </div>
+        </button>
+      `).join('')}
+    </div>
+    ${scaleCount > 1 ? `
+    <div class="flex justify-between text-xs text-gray-500 px-1 mt-2">
+      <span>${labels[0] || ''}</span>
+      <span>${labels[scaleCount - 1] || ''}</span>
+    </div>
+    ` : ''}
+  `
+}
 
 // 문항 디스플레이 설정
 function setQuestionDisplay(count) {
@@ -1110,13 +1212,18 @@ function checkStartButtonState() {
   }
 }
 
-// 입력 필드 변경 감지
+// 입력 필드 변경 감지 및 초기화
 document.addEventListener('DOMContentLoaded', () => {
   const nameInput = document.getElementById('exec-name')
   const emailInput = document.getElementById('exec-email')
   
   if (nameInput) nameInput.addEventListener('input', checkStartButtonState)
   if (emailInput) emailInput.addEventListener('input', checkStartButtonState)
+  
+  // 척도 레이블 초기화
+  if (document.getElementById('scale-type')) {
+    updateScaleLabels()
+  }
 })
 
 // 진단 시작
@@ -1132,10 +1239,14 @@ async function startAssessment() {
     return
   }
   
-  // 응답자 정보 저장
+  // 응답자 정보 및 척도 정보 저장
   currentRespondentInfo = {
     name, email, department, position, level
   }
+  
+  // 척도 설정 저장
+  const scaleType = document.getElementById('scale-type').value
+  scaleConfig.type = scaleType
   
   try {
     // 진단 문항 로드
@@ -1212,32 +1323,9 @@ function renderQuestionsPage() {
           </div>
         </div>
         
-        <!-- 응답 척도 (5점 리커트) -->
+        <!-- 응답 척도 (동적) -->
         <div class="space-y-2">
-          <div class="grid grid-cols-5 gap-2">
-            ${[1, 2, 3, 4, 5].map(value => `
-              <button 
-                onclick="selectAnswer(${globalIdx}, ${value})"
-                class="response-btn py-4 border-2 rounded-lg transition-all ${
-                  currentResponse === value 
-                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                }">
-                <div class="text-2xl font-bold text-gray-700">${value}</div>
-                <div class="text-xs text-gray-500 mt-1">
-                  ${value === 1 ? '전혀<br>그렇지 않다' : 
-                    value === 2 ? '그렇지<br>않다' : 
-                    value === 3 ? '보통<br>이다' : 
-                    value === 4 ? '그렇다' : 
-                    '매우<br>그렇다'}
-                </div>
-              </button>
-            `).join('')}
-          </div>
-          <div class="flex justify-between text-xs text-gray-500 px-1">
-            <span>전혀 그렇지 않다</span>
-            <span>매우 그렇다</span>
-          </div>
+          ${renderScaleButtons(globalIdx, currentResponse)}
         </div>
       </div>
     `
