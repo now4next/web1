@@ -88,11 +88,48 @@ app.post('/api/ai/generate-questions', async (c) => {
   const apiKey = c.env.OPENAI_API_KEY
   const body = await c.req.json<AIGenerationRequest>()
   
+  // 데모 모드: API 키가 없으면 샘플 데이터 반환
   if (!apiKey || apiKey === 'your-openai-api-key-here') {
-    return c.json({ 
-      success: false, 
-      error: 'OpenAI API key가 설정되지 않았습니다. .dev.vars 파일을 확인해주세요.' 
-    }, 400)
+    const demoData = {
+      behavioral_indicators: body.competency_keywords.map(keyword => ({
+        competency: keyword,
+        indicators: [
+          `${keyword} 관련 업무를 체계적으로 수행합니다`,
+          `${keyword}을 활용하여 팀 목표 달성에 기여합니다`,
+          `${keyword} 역량을 지속적으로 개발하고 향상시킵니다`
+        ]
+      })),
+      questions: body.competency_keywords.flatMap(keyword => [
+        {
+          competency: keyword,
+          question_text: `나는 ${keyword} 역량을 효과적으로 발휘한다`,
+          question_type: body.question_type
+        },
+        {
+          competency: keyword,
+          question_text: `나는 ${keyword}과 관련된 업무를 자신있게 수행할 수 있다`,
+          question_type: body.question_type
+        },
+        {
+          competency: keyword,
+          question_text: `나는 ${keyword} 역량 개발을 위해 노력하고 있다`,
+          question_type: body.question_type
+        },
+        {
+          competency: keyword,
+          question_text: `동료들은 나의 ${keyword} 역량을 인정한다`,
+          question_type: body.question_type
+        },
+        {
+          competency: keyword,
+          question_text: `나는 ${keyword}을 활용하여 조직 성과에 기여한다`,
+          question_type: body.question_type
+        }
+      ]),
+      guide: `🔍 진단 안내\n\n본 진단은 ${body.competency_keywords.join(', ')} 역량을 평가하기 위한 ${body.question_type === 'self' ? '자가진단' : body.question_type === 'multi' ? '다면평가' : '설문조사'}입니다.\n\n✅ 목적:\n- 현재 역량 수준 파악\n- 강점과 개발영역 확인\n- 개인 성장 방향 설정\n\n⚠️ 유의사항:\n- 솔직하고 객관적으로 응답해주세요\n- 최근 6개월 동안의 경험을 바탕으로 평가하세요\n- 모든 문항에 빠짐없이 응답해주세요\n\n📋 프로세스:\n1. 진단 실시 (약 10-15분 소요)\n2. 결과 분석 및 리포트 생성\n3. AI 코칭 및 개발 계획 수립\n\n⚙️ 데모 모드: 실제 AI 생성을 원하시면 .dev.vars 파일에 OpenAI API 키를 설정하세요.`
+    }
+    
+    return c.json({ success: true, data: demoData, demo: true })
   }
   
   // OpenAI API 호출
@@ -214,11 +251,30 @@ app.post('/api/ai/coaching', async (c) => {
   const apiKey = c.env.OPENAI_API_KEY
   const body = await c.req.json()
   
+  // 데모 모드: API 키가 없으면 샘플 응답 반환
   if (!apiKey || apiKey === 'your-openai-api-key-here') {
+    const lastMessage = body.messages[body.messages.length - 1]
+    const demoResponse = `안녕하세요! AI 역량 개발 코치입니다. 
+
+"${lastMessage.content}" 에 대해 말씀드리겠습니다.
+
+역량 개발은 지속적인 과정입니다. 다음과 같은 방법을 추천드립니다:
+
+1. **자기 평가**: 현재 수준을 객관적으로 파악하세요
+2. **목표 설정**: SMART 목표를 설정하세요 (구체적, 측정가능, 달성가능, 관련있는, 시한있는)
+3. **실천 계획**: 작은 단계부터 시작하여 꾸준히 실행하세요
+4. **피드백**: 동료나 상사로부터 정기적인 피드백을 받으세요
+5. **학습**: 관련 도서, 강의, 멘토링을 활용하세요
+
+추가로 궁금하신 점이 있으시면 언제든 질문해주세요!
+
+⚙️ 데모 모드: 실제 AI 코칭을 원하시면 .dev.vars 파일에 OpenAI API 키를 설정하세요.`
+    
     return c.json({ 
-      success: false, 
-      error: 'OpenAI API key가 설정되지 않았습니다.' 
-    }, 400)
+      success: true, 
+      message: demoResponse,
+      demo: true
+    })
   }
   
   try {

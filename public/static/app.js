@@ -136,8 +136,25 @@ async function generateQuestions() {
     
     if (response.data.success) {
       const data = response.data.data
+      const isDemo = response.data.demo
       
       contentDiv.innerHTML = `
+        ${isDemo ? `
+        <!-- 데모 모드 알림 -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+            <div>
+              <h4 class="font-semibold text-yellow-900 mb-1">데모 모드로 실행 중</h4>
+              <p class="text-yellow-800 text-sm">
+                OpenAI API 키가 설정되지 않아 샘플 데이터를 표시합니다. 
+                실제 AI 생성을 원하시면 <code class="bg-yellow-100 px-1 rounded">.dev.vars</code> 파일에 API 키를 설정하세요.
+              </p>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+        
         <!-- 진단 안내문 -->
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
           <h4 class="font-semibold text-blue-900 mb-2">
