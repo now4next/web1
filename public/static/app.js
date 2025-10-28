@@ -703,3 +703,360 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })
 })
+
+// ============================================================================
+// Phase 2: 분석 및 인사이트
+// ============================================================================
+
+// 응답자 목록 로드
+async function loadRespondents() {
+  try {
+    const response = await axios.get('/api/respondents')
+    
+    if (response.data.success && response.data.data.length > 0) {
+      const listDiv = document.getElementById('respondents-list')
+      listDiv.innerHTML = response.data.data.map(resp => `
+        <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+             onclick="loadAnalysis(${resp.id})">
+          <div>
+            <div class="font-medium text-gray-800">${resp.name}</div>
+            <div class="text-sm text-gray-500">${resp.email} · ${resp.department || '부서 미지정'} · ${resp.position || '직책 미지정'}</div>
+          </div>
+          <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+            <i class="fas fa-chart-line mr-1"></i>결과 보기
+          </button>
+        </div>
+      `).join('')
+    } else {
+      document.getElementById('respondents-list').innerHTML = 
+        '<p class="text-gray-400 text-sm">아직 응답자가 없습니다</p>'
+    }
+  } catch (error) {
+    console.error('Error loading respondents:', error)
+    document.getElementById('respondents-list').innerHTML = 
+      '<p class="text-red-500 text-sm">응답자 목록을 불러오는 중 오류가 발생했습니다</p>'
+  }
+}
+
+// 개별 분석 결과 로드
+async function loadAnalysis(respondentId) {
+  const reportDiv = document.getElementById('analysis-report')
+  reportDiv.classList.remove('hidden')
+  reportDiv.innerHTML = `
+    <div class="text-center py-8">
+      <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+      <p class="text-gray-600">분석 결과를 불러오는 중...</p>
+    </div>
+  `
+  
+  try {
+    const response = await axios.get(`/api/analysis/${respondentId}`)
+    
+    if (response.data.success) {
+      renderAnalysisReport(response.data.data)
+      
+      // AI 인사이트 생성
+      loadAIInsights(respondentId, response.data.data)
+    } else {
+      reportDiv.innerHTML = `
+        <div class="text-center py-8">
+          <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+          <p class="text-red-600">${response.data.error}</p>
+        </div>
+      `
+    }
+  } catch (error) {
+    console.error('Error loading analysis:', error)
+    reportDiv.innerHTML = `
+      <div class="text-center py-8">
+        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+        <p class="text-red-600">분석 결과를 불러오는 중 오류가 발생했습니다</p>
+      </div>
+    `
+  }
+}
+
+// 분석 리포트 렌더링
+function renderAnalysisReport(data) {
+  const reportDiv = document.getElementById('analysis-report')
+  const { respondent, analysis, summary } = data
+  
+  reportDiv.innerHTML = `
+    <!-- 리포트 헤더 -->
+    <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 mb-6">
+      <div class="flex justify-between items-start">
+        <div>
+          <h3 class="text-2xl font-bold mb-2">역량 진단 결과 리포트</h3>
+          <p class="text-blue-100">${respondent.name} · ${respondent.position || '직책 미지정'}</p>
+          <p class="text-sm text-blue-200">${respondent.email}</p>
+        </div>
+        <button onclick="document.getElementById('analysis-report').classList.add('hidden')" 
+                class="text-white hover:bg-white/20 rounded px-3 py-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- 전체 요약 -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-600">
+        <div class="text-sm text-gray-600 mb-1">전체 평균</div>
+        <div class="text-3xl font-bold text-blue-600">${summary.overallAverage}</div>
+        <div class="text-xs text-gray-500">총 ${summary.totalQuestions}개 문항</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-4 border-l-4 border-green-600">
+        <div class="text-sm text-gray-600 mb-1">최고 점수</div>
+        <div class="text-2xl font-bold text-green-600">${summary.highestScore.average}</div>
+        <div class="text-xs text-gray-500">${summary.highestScore.competency}</div>
+      </div>
+      <div class="bg-orange-50 rounded-lg p-4 border-l-4 border-orange-600">
+        <div class="text-sm text-gray-600 mb-1">최저 점수</div>
+        <div class="text-2xl font-bold text-orange-600">${summary.lowestScore.average}</div>
+        <div class="text-xs text-gray-500">${summary.lowestScore.competency}</div>
+      </div>
+      <div class="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-600">
+        <div class="text-sm text-gray-600 mb-1">분석 역량</div>
+        <div class="text-3xl font-bold text-purple-600">${summary.totalCompetencies}</div>
+        <div class="text-xs text-gray-500">개 역량</div>
+      </div>
+    </div>
+    
+    <!-- 역량별 점수 차트 -->
+    <div class="bg-white rounded-lg border p-6 mb-6">
+      <h4 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-chart-bar mr-2 text-blue-600"></i>역량별 점수
+      </h4>
+      <canvas id="competency-chart" height="80"></canvas>
+    </div>
+    
+    <!-- 강점 및 개선영역 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div class="bg-green-50 rounded-lg p-6 border border-green-200">
+        <h4 class="text-lg font-semibold text-green-800 mb-3">
+          <i class="fas fa-thumbs-up mr-2"></i>강점 역량
+        </h4>
+        <ul class="space-y-2">
+          ${summary.strengths.map(s => `
+            <li class="flex items-center text-green-700">
+              <i class="fas fa-check-circle mr-2"></i>${s}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+      <div class="bg-orange-50 rounded-lg p-6 border border-orange-200">
+        <h4 class="text-lg font-semibold text-orange-800 mb-3">
+          <i class="fas fa-arrow-up mr-2"></i>개선 영역
+        </h4>
+        <ul class="space-y-2">
+          ${summary.improvements.map(i => `
+            <li class="flex items-center text-orange-700">
+              <i class="fas fa-exclamation-circle mr-2"></i>${i}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 역량별 상세 분석 -->
+    <div class="bg-white rounded-lg border p-6 mb-6">
+      <h4 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-list-alt mr-2 text-purple-600"></i>역량별 상세 분석
+      </h4>
+      <div class="space-y-4">
+        ${analysis.map(comp => `
+          <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h5 class="font-semibold text-gray-800">${comp.competency}</h5>
+                <p class="text-sm text-gray-500">${comp.description}</p>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-bold ${comp.average >= 4 ? 'text-green-600' : comp.average >= 3 ? 'text-blue-600' : 'text-orange-600'}">
+                  ${comp.average}
+                </div>
+                <div class="text-xs text-gray-500">평균 점수</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-sm mb-3">
+              <div class="bg-gray-50 rounded p-2 text-center">
+                <div class="text-gray-500">문항 수</div>
+                <div class="font-semibold">${comp.count}</div>
+              </div>
+              <div class="bg-gray-50 rounded p-2 text-center">
+                <div class="text-gray-500">최고점</div>
+                <div class="font-semibold">${comp.max}</div>
+              </div>
+              <div class="bg-gray-50 rounded p-2 text-center">
+                <div class="text-gray-500">최저점</div>
+                <div class="font-semibold">${comp.min}</div>
+              </div>
+              <div class="bg-gray-50 rounded p-2 text-center">
+                <div class="text-gray-500">표준편차</div>
+                <div class="font-semibold">${comp.stdDev}</div>
+              </div>
+            </div>
+            <div class="relative pt-1">
+              <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                <div style="width:${(comp.average / 5) * 100}%" 
+                     class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${comp.average >= 4 ? 'bg-green-500' : comp.average >= 3 ? 'bg-blue-500' : 'bg-orange-500'}">
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    
+    <!-- AI 인사이트 -->
+    <div id="ai-insights" class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 p-6">
+      <h4 class="text-lg font-semibold text-purple-800 mb-3">
+        <i class="fas fa-brain mr-2"></i>AI 인사이트
+      </h4>
+      <div class="text-center py-8">
+        <i class="fas fa-spinner fa-spin text-3xl text-purple-600 mb-2"></i>
+        <p class="text-gray-600">AI가 인사이트를 생성하고 있습니다...</p>
+      </div>
+    </div>
+  `
+  
+  // 차트 렌더링
+  renderCompetencyChart(analysis)
+}
+
+// 역량 차트 렌더링
+function renderCompetencyChart(analysis) {
+  const ctx = document.getElementById('competency-chart')
+  if (!ctx) return
+  
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: analysis.map(a => a.competency),
+      datasets: [{
+        label: '평균 점수',
+        data: analysis.map(a => a.average),
+        backgroundColor: analysis.map(a => 
+          a.average >= 4 ? 'rgba(34, 197, 94, 0.8)' : 
+          a.average >= 3 ? 'rgba(59, 130, 246, 0.8)' : 
+          'rgba(249, 115, 22, 0.8)'
+        ),
+        borderColor: analysis.map(a => 
+          a.average >= 4 ? 'rgb(34, 197, 94)' : 
+          a.average >= 3 ? 'rgb(59, 130, 246)' : 
+          'rgb(249, 115, 22)'
+        ),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 5,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `평균: ${context.parsed.y}점`
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+// AI 인사이트 로드
+async function loadAIInsights(respondentId, analysisData) {
+  const insightsDiv = document.getElementById('ai-insights')
+  
+  try {
+    const response = await axios.post(`/api/analysis/${respondentId}/insights`, analysisData, {
+      timeout: 60000
+    })
+    
+    if (response.data.success) {
+      const insights = response.data.insights
+      const isDemo = response.data.demo
+      
+      insightsDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-lg font-semibold text-purple-800">
+            <i class="fas fa-brain mr-2"></i>AI 인사이트
+          </h4>
+          ${isDemo ? '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">데모 모드</span>' : ''}
+        </div>
+        
+        <!-- 전반적 평가 -->
+        <div class="bg-white rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-gray-800 mb-2">
+            <i class="fas fa-star text-yellow-500 mr-2"></i>전반적 평가
+          </h5>
+          <p class="text-gray-700 leading-relaxed">${insights.overall}</p>
+        </div>
+        
+        <!-- 강점 분석 -->
+        <div class="bg-white rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-gray-800 mb-2">
+            <i class="fas fa-trophy text-green-500 mr-2"></i>강점 역량 분석
+          </h5>
+          <p class="text-gray-700 leading-relaxed">${insights.strengths}</p>
+        </div>
+        
+        <!-- 개선 영역 -->
+        <div class="bg-white rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-gray-800 mb-2">
+            <i class="fas fa-arrow-trend-up text-orange-500 mr-2"></i>개선 영역
+          </h5>
+          <p class="text-gray-700 leading-relaxed">${insights.improvements}</p>
+        </div>
+        
+        <!-- 추천 사항 -->
+        <div class="bg-white rounded-lg p-4">
+          <h5 class="font-semibold text-gray-800 mb-3">
+            <i class="fas fa-lightbulb text-blue-500 mr-2"></i>추천 사항
+          </h5>
+          <ul class="space-y-2">
+            ${insights.recommendations.map((rec, idx) => `
+              <li class="flex items-start text-gray-700">
+                <span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">
+                  ${idx + 1}
+                </span>
+                <span>${rec}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `
+    }
+  } catch (error) {
+    console.error('Error loading AI insights:', error)
+    insightsDiv.innerHTML = `
+      <h4 class="text-lg font-semibold text-purple-800 mb-3">
+        <i class="fas fa-brain mr-2"></i>AI 인사이트
+      </h4>
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-red-600">AI 인사이트를 생성하는 중 오류가 발생했습니다</p>
+      </div>
+    `
+  }
+}
+
+// 탭 전환 시 응답자 목록 로드
+const originalShowTab = showTab
+window.showTab = function(tabName) {
+  originalShowTab.call(this, tabName)
+  if (tabName === 'analytics') {
+    loadRespondents()
+  }
+}

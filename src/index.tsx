@@ -322,6 +322,181 @@ app.get('/api/respondents', async (c) => {
   return c.json({ success: true, data: results })
 })
 
+// 응답자별 결과 분석
+app.get('/api/analysis/:respondentId', async (c) => {
+  const db = c.env.DB
+  const respondentId = c.req.param('respondentId')
+  
+  // 응답자 정보
+  const respondent = await db.prepare(`
+    SELECT * FROM respondents WHERE id = ?
+  `).bind(respondentId).first()
+  
+  if (!respondent) {
+    return c.json({ success: false, error: '응답자를 찾을 수 없습니다' }, 404)
+  }
+  
+  // 전체 응답 데이터 조회
+  const { results: responses } = await db.prepare(`
+    SELECT 
+      ar.response_value,
+      aq.question_text,
+      aq.question_type,
+      c.keyword as competency,
+      c.description as competency_description
+    FROM assessment_responses ar
+    JOIN assessment_questions aq ON ar.question_id = aq.id
+    JOIN competencies c ON aq.competency_id = c.id
+    WHERE ar.respondent_id = ?
+    ORDER BY c.keyword, ar.created_at
+  `).bind(respondentId).all()
+  
+  if (!responses || responses.length === 0) {
+    return c.json({ success: false, error: '응답 데이터가 없습니다' }, 404)
+  }
+  
+  // 역량별 점수 계산
+  const competencyScores: Record<string, any> = {}
+  
+  responses.forEach((r: any) => {
+    if (!competencyScores[r.competency]) {
+      competencyScores[r.competency] = {
+        competency: r.competency,
+        description: r.competency_description,
+        scores: [],
+        questions: []
+      }
+    }
+    competencyScores[r.competency].scores.push(r.response_value)
+    competencyScores[r.competency].questions.push({
+      question_text: r.question_text,
+      response_value: r.response_value
+    })
+  })
+  
+  // 통계 계산
+  const analysis = Object.values(competencyScores).map((comp: any) => {
+    const scores = comp.scores
+    const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+    const max = Math.max(...scores)
+    const min = Math.min(...scores)
+    
+    // 표준편차 계산
+    const variance = scores.reduce((sum: number, val: number) => 
+      sum + Math.pow(val - avg, 2), 0) / scores.length
+    const stdDev = Math.sqrt(variance)
+    
+    return {
+      competency: comp.competency,
+      description: comp.description,
+      average: parseFloat(avg.toFixed(2)),
+      max,
+      min,
+      stdDev: parseFloat(stdDev.toFixed(2)),
+      count: scores.length,
+      questions: comp.questions
+    }
+  })
+  
+  // 전체 평균
+  const overallAvg = analysis.reduce((sum, a) => sum + a.average, 0) / analysis.length
+  
+  // 강점/개선영역 식별
+  const sortedByScore = [...analysis].sort((a, b) => b.average - a.average)
+  const strengths = sortedByScore.slice(0, Math.ceil(sortedByScore.length / 3))
+  const improvements = sortedByScore.slice(-Math.ceil(sortedByScore.length / 3))
+  
+  return c.json({
+    success: true,
+    data: {
+      respondent,
+      analysis,
+      summary: {
+        totalQuestions: responses.length,
+        totalCompetencies: analysis.length,
+        overallAverage: parseFloat(overallAvg.toFixed(2)),
+        highestScore: sortedByScore[0],
+        lowestScore: sortedByScore[sortedByScore.length - 1],
+        strengths: strengths.map(s => s.competency),
+        improvements: improvements.map(i => i.competency)
+      }
+    }
+  })
+})
+
+// AI 인사이트 생성
+app.post('/api/analysis/:respondentId/insights', async (c) => {
+  const apiKey = c.env.OPENAI_API_KEY
+  const respondentId = c.req.param('respondentId')
+  const body = await c.req.json()
+  
+  // 데모 모드 또는 실제 AI 사용
+  if (!apiKey || apiKey === 'your-openai-api-key-here') {
+    // 데모 인사이트
+    const demoInsights = {
+      overall: `${body.respondent.name}님의 전체 평균 점수는 ${body.summary.overallAverage}점으로, 전반적으로 우수한 역량 수준을 보이고 있습니다.`,
+      strengths: `특히 ${body.summary.strengths.join(', ')} 역량에서 강점을 보이고 있습니다. 이러한 강점을 더욱 발전시켜 조직의 핵심 인재로 성장할 수 있습니다.`,
+      improvements: `${body.summary.improvements.join(', ')} 역량은 개선이 필요한 영역입니다. 체계적인 학습과 실무 경험을 통해 향상시킬 수 있습니다.`,
+      recommendations: [
+        '강점 역량을 활용한 프로젝트 참여 기회 확대',
+        '개선 영역에 대한 맞춤형 교육 프로그램 수강',
+        '멘토링을 통한 실무 노하우 습득',
+        '정기적인 피드백 세션으로 지속적 성장'
+      ]
+    }
+    return c.json({ success: true, insights: demoInsights, demo: true })
+  }
+  
+  // 실제 AI 인사이트 생성
+  const prompt = `당신은 조직 역량 진단 전문가입니다. 다음 진단 결과를 분석하고 인사이트를 제공해주세요.
+
+응답자: ${body.respondent.name} (${body.respondent.position})
+전체 평균: ${body.summary.overallAverage}점
+강점 역량: ${body.summary.strengths.join(', ')}
+개선 영역: ${body.summary.improvements.join(', ')}
+
+역량별 상세:
+${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}개 문항)`).join('\n')}
+
+다음 항목에 대해 구체적이고 실용적인 인사이트를 제공해주세요:
+1. overall: 전반적인 역량 수준 평가
+2. strengths: 강점 역량 분석 및 활용 방안
+3. improvements: 개선 영역 분석 및 발전 방향
+4. recommendations: 구체적인 실행 가능한 추천사항 (배열)
+
+JSON 형식으로 응답해주세요.`
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: '당신은 조직 역량 진단 및 인재개발 전문가입니다.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' }
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error('OpenAI API 오류')
+    }
+    
+    const data = await response.json() as any
+    const insights = JSON.parse(data.choices[0].message.content)
+    
+    return c.json({ success: true, insights, demo: false })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // AI 코칭 API
 app.post('/api/ai/coaching', async (c) => {
   const apiKey = c.env.OPENAI_API_KEY
@@ -508,22 +683,17 @@ app.get('/', (c) => {
                         <i class="fas fa-chart-bar text-green-600 mr-2"></i>
                         Phase 2: 분석 및 인사이트
                     </h2>
-                    <p class="text-gray-600 mb-4">진단 데이터 분석 기능은 개발 중입니다.</p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="border rounded-lg p-4">
-                            <div class="text-3xl font-bold text-blue-600 mb-2">--</div>
-                            <div class="text-sm text-gray-600">진행 중인 진단</div>
-                        </div>
-                        <div class="border rounded-lg p-4">
-                            <div class="text-3xl font-bold text-green-600 mb-2">--</div>
-                            <div class="text-sm text-gray-600">완료된 응답</div>
-                        </div>
-                        <div class="border rounded-lg p-4">
-                            <div class="text-3xl font-bold text-purple-600 mb-2">--</div>
-                            <div class="text-sm text-gray-600">분석 대기</div>
+                    <!-- 응답자 목록 -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">응답자 목록</h3>
+                        <div id="respondents-list" class="space-y-2">
+                            <p class="text-gray-400 text-sm">로딩 중...</p>
                         </div>
                     </div>
+                    
+                    <!-- 결과 리포트 영역 -->
+                    <div id="analysis-report" class="hidden"></div>
                 </div>
             </div>
 
