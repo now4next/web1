@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "aiassess",
   "compatibility_date": "2025-10-28",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
