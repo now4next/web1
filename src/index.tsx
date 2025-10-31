@@ -312,6 +312,163 @@ app.post('/api/assessment-responses', async (c) => {
   return c.json({ success: true, id: result.meta.last_row_id })
 })
 
+// 진단 일괄 제출 (새로운 API)
+app.post('/api/submit-assessment', async (c) => {
+  const db = c.env.DB
+  const body = await c.req.json()
+  
+  try {
+    // 1. 세션 생성 (이미 있으면 재사용)
+    let sessionId = body.session_id
+    if (!sessionId) {
+      const sessionName = body.respondent_info?.name 
+        ? `${body.respondent_info.name}의 진단 (${new Date().toLocaleDateString('ko-KR')})`
+        : `익명 진단 (${new Date().toLocaleDateString('ko-KR')})`
+      
+      const sessionResult = await db.prepare(`
+        INSERT INTO assessment_sessions (session_name, session_type, target_level, status, start_date)
+        VALUES (?, 'self', ?, 'completed', datetime('now'))
+      `).bind(sessionName, body.respondent_info?.level || '').run()
+      sessionId = sessionResult.meta.last_row_id
+    }
+    
+    // 2. 응답자 등록 또는 조회
+    const respondentInfo = body.respondent_info
+    let respondentId = null
+    
+    if (respondentInfo && respondentInfo.email) {
+      // 기존 응답자 확인
+      const existing = await db.prepare(`
+        SELECT id FROM respondents WHERE email = ?
+      `).bind(respondentInfo.email).first()
+      
+      if (existing) {
+        respondentId = existing.id
+      } else {
+        // 새 응답자 등록
+        const respondentResult = await db.prepare(`
+          INSERT INTO respondents (name, email, department, position)
+          VALUES (?, ?, ?, ?)
+        `).bind(
+          respondentInfo.name || '익명',
+          respondentInfo.email,
+          respondentInfo.department || '',
+          respondentInfo.position || ''
+        ).run()
+        respondentId = respondentResult.meta.last_row_id
+      }
+    }
+    
+    // 3. 각 응답 저장
+    const responses = body.responses || []
+    const savedResponses = []
+    
+    for (const resp of responses) {
+      // 문항 ID 찾기 또는 생성
+      let questionId = resp.question_id
+      
+      if (!questionId) {
+        // 역량으로 competency_id 찾기
+        const competency = await db.prepare(`
+          SELECT id FROM competencies WHERE keyword = ?
+        `).bind(resp.competency).first()
+        
+        if (competency) {
+          // 문항이 이미 있는지 확인
+          const existingQuestion = await db.prepare(`
+            SELECT id FROM assessment_questions 
+            WHERE competency_id = ? AND question_text = ?
+          `).bind(competency.id, resp.question_text).first()
+          
+          if (existingQuestion) {
+            questionId = existingQuestion.id
+          } else {
+            // 새 문항 생성
+            const questionResult = await db.prepare(`
+              INSERT INTO assessment_questions (competency_id, question_text, question_type)
+              VALUES (?, ?, 'self')
+            `).bind(competency.id, resp.question_text).run()
+            questionId = questionResult.meta.last_row_id
+          }
+        }
+      }
+      
+      if (questionId) {
+        // 응답 저장
+        const responseResult = await db.prepare(`
+          INSERT INTO assessment_responses (session_id, respondent_id, question_id, response_value)
+          VALUES (?, ?, ?, ?)
+        `).bind(sessionId, respondentId, questionId, resp.response).run()
+        
+        savedResponses.push({
+          id: responseResult.meta.last_row_id,
+          question_id: questionId,
+          response: resp.response
+        })
+      }
+    }
+    
+    return c.json({ 
+      success: true, 
+      session_id: sessionId,
+      respondent_id: respondentId,
+      saved_count: savedResponses.length,
+      message: '진단이 성공적으로 제출되었습니다!'
+    })
+  } catch (error: any) {
+    console.error('Submit assessment error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message 
+    }, 500)
+  }
+})
+
+// 최근 제출 데이터 확인 (디버그용)
+app.get('/api/debug/recent-submissions', async (c) => {
+  const db = c.env.DB
+  
+  try {
+    // 최근 세션
+    const sessions = await db.prepare(`
+      SELECT * FROM assessment_sessions 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `).all()
+    
+    // 최근 응답자
+    const respondents = await db.prepare(`
+      SELECT * FROM respondents 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `).all()
+    
+    // 최근 응답
+    const responses = await db.prepare(`
+      SELECT ar.*, aq.question_text, r.name as respondent_name
+      FROM assessment_responses ar
+      LEFT JOIN assessment_questions aq ON ar.question_id = aq.id
+      LEFT JOIN respondents r ON ar.respondent_id = r.id
+      ORDER BY ar.created_at DESC 
+      LIMIT 20
+    `).all()
+    
+    return c.json({
+      success: true,
+      data: {
+        sessions: sessions.results,
+        respondents: respondents.results,
+        responses: responses.results
+      }
+    })
+  } catch (error: any) {
+    return c.json({ 
+      success: false, 
+      error: error.message 
+    }, 500)
+  }
+})
+
 // 응답자 등록
 app.post('/api/respondents', async (c) => {
   const db = c.env.DB
@@ -479,13 +636,20 @@ app.post('/api/analysis/:respondentId/insights', async (c) => {
 역량별 상세:
 ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}개 문항)`).join('\n')}
 
-다음 항목에 대해 구체적이고 실용적인 인사이트를 제공해주세요:
-1. overall: 전반적인 역량 수준 평가
-2. strengths: 강점 역량 분석 및 활용 방안
-3. improvements: 개선 영역 분석 및 발전 방향
-4. recommendations: 구체적인 실행 가능한 추천사항 (배열)
+다음 JSON 형식으로 정확히 응답해주세요:
+{
+  "overall": "전반적인 역량 수준 평가 (2-3문장)",
+  "strengths": "강점 역량 분석 및 활용 방안 (2-3문장)",
+  "improvements": "개선 영역 분석 및 발전 방향 (2-3문장)",
+  "recommendations": [
+    "구체적인 실행 가능한 추천사항 1",
+    "구체적인 실행 가능한 추천사항 2",
+    "구체적인 실행 가능한 추천사항 3",
+    "구체적인 실행 가능한 추천사항 4"
+  ]
+}
 
-JSON 형식으로 응답해주세요.`
+각 항목은 한국어로 작성하고, 실용적이고 구체적인 내용으로 작성해주세요.`
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -510,7 +674,15 @@ JSON 형식으로 응답해주세요.`
     }
     
     const data = await response.json() as any
-    const insights = JSON.parse(data.choices[0].message.content)
+    const rawInsights = JSON.parse(data.choices[0].message.content)
+    
+    // OpenAI 응답 형식을 프론트엔드 형식으로 변환
+    const insights = {
+      overall: rawInsights.overall?.evaluation || rawInsights.overall || '분석 결과가 없습니다.',
+      strengths: rawInsights.strengths?.analysis || rawInsights.strengths || '강점 분석 결과가 없습니다.',
+      improvements: rawInsights.improvements?.analysis || rawInsights.improvements || '개선 영역 분석 결과가 없습니다.',
+      recommendations: rawInsights.recommendations || []
+    }
     
     return c.json({ success: true, insights, demo: false })
   } catch (error: any) {
@@ -584,6 +756,16 @@ app.post('/api/ai/coaching', async (c) => {
 // ============================================================================
 
 app.get('/', (c) => {
+  // CSP 헤더 설정 - unsafe-eval과 unsafe-inline 허용
+  c.header('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "font-src 'self' https://cdn.jsdelivr.net; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self';"
+  )
+  
   return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
@@ -593,7 +775,8 @@ app.get('/', (c) => {
         <title>AI 역량 진단 플랫폼</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <link href="/static/style.css?v=2" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <link href="/static/style.css?v=7" rel="stylesheet">
     </head>
     <body class="bg-gray-50">
         <!-- Navigation -->
@@ -605,16 +788,13 @@ app.get('/', (c) => {
                         <h1 class="text-xl font-bold text-gray-800">AI 역량 진단 플랫폼</h1>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <button onclick="showTab('assess')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
+                        <button onclick="showTab('assess', this)" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50 bg-blue-100 text-blue-700">
                             <i class="fas fa-clipboard-list mr-2"></i>진단 설계
                         </button>
-                        <button onclick="showTab('execute')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
-                            <i class="fas fa-pen-to-square mr-2"></i>진단 실행
+                        <button onclick="showTab('analytics', this)" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
+                            <i class="fas fa-chart-bar mr-2"></i>결과 분석
                         </button>
-                        <button onclick="showTab('analytics')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
-                            <i class="fas fa-chart-bar mr-2"></i>분석
-                        </button>
-                        <button onclick="showTab('action')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
+                        <button onclick="showTab('action', this)" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
                             <i class="fas fa-rocket mr-2"></i>실행 지원
                         </button>
                     </div>
@@ -629,7 +809,7 @@ app.get('/', (c) => {
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">
                         <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
-                        Phase 1: 진단 설계 및 실행
+                        Phase 1: 진단 설계
                     </h2>
                     
                     <!-- 역량 키워드 검색 -->
@@ -643,6 +823,7 @@ app.get('/', (c) => {
                                 id="competency-search" 
                                 placeholder="예: 커뮤니케이션, 리더십, 전략적사고"
                                 class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                onkeypress="if(event.key === 'Enter') searchCompetencies()"
                             >
                             <button onclick="searchCompetencies()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i class="fas fa-search mr-2"></i>검색
@@ -669,16 +850,16 @@ app.get('/', (c) => {
                     <!-- AI 문항 생성 옵션 -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">대상 직급</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">역량 수준</label>
                             <select id="target-level" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="all">전체</option>
-                                <option value="junior">사원/대리</option>
-                                <option value="senior">과장/차장</option>
-                                <option value="manager">팀장 이상</option>
+                                <option value="junior">사원급</option>
+                                <option value="middle">중간관리자급</option>
+                                <option value="manager">팀장급</option>
+                                <option value="executive">임원급 이상</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">진단 유형</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">진단 방식</label>
                             <select id="question-type" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                 <option value="self">자가진단</option>
                                 <option value="multi">다면평가</option>
@@ -698,14 +879,12 @@ app.get('/', (c) => {
                         <div id="generation-content" class="bg-gray-50 rounded-lg p-4"></div>
                     </div>
                 </div>
-            </div>
-
-            <!-- EXECUTE Tab (진단 실행) -->
-            <div id="tab-execute" class="tab-content hidden">
-                <div class="bg-white rounded-lg shadow p-6">
+                
+                <!-- Phase 2: 진단 설정 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-6">
-                        <i class="fas fa-pen-to-square text-purple-600 mr-2"></i>
-                        진단 실행
+                        <i class="fas fa-cog text-green-600 mr-2"></i>
+                        Phase 2: 진단 설정
                     </h2>
                     
                     <!-- Step 1: 응답자 기본 정보 -->
@@ -762,127 +941,83 @@ app.get('/', (c) => {
                                 </select>
                             </div>
                         </div>
-                        
-                        <!-- 응답 척도 설정 -->
-                        <div class="mt-6 border-t pt-6">
-                            <h4 class="text-md font-semibold text-gray-800 mb-4">
-                                <i class="fas fa-sliders-h text-purple-600 mr-2"></i>응답 척도 설정
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">척도 유형 *</label>
-                                    <select id="scale-type" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="updateScaleLabels()">
-                                        <option value="binary">2점 척도 (예/아니오, O/X)</option>
-                                        <option value="3-point">3점 척도</option>
-                                        <option value="5-point" selected>5점 척도 (리커트)</option>
-                                        <option value="7-point">7점 척도</option>
-                                        <option value="10-point">10점 척도</option>
-                                        <option value="single">1점 (체크리스트)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- 척도 레이블 설정 -->
-                            <div id="scale-labels-container" class="bg-gray-50 rounded-lg p-4">
-                                <p class="text-sm text-gray-600 mb-3">각 척도 숫자에 대한 의미를 설정하세요</p>
-                                <div id="scale-labels-grid" class="grid grid-cols-1 gap-3">
-                                    <!-- 동적으로 생성됨 -->
-                                </div>
-                            </div>
-                        </div>
                     </div>
-
-                    <!-- Step 2: 진단 문항 디스플레이 설정 -->
-                    <div id="display-settings-section" class="mb-8">
+                    
+                    <!-- Step 2: 응답 척도 설정 -->
+                    <div id="scale-settings-section" class="mb-8">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
-                            진단 문항 디스플레이 설정
+                            응답 척도 설정
                         </h3>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                            <div class="flex items-start">
-                                <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
-                                <div>
-                                    <p class="text-sm text-blue-800 mb-2">
-                                        <strong>한 화면에 표시할 문항 수를 선택하세요</strong>
-                                    </p>
-                                    <ul class="text-xs text-blue-700 space-y-1">
-                                        <li>• <strong>1개씩</strong>: 집중력 향상, 한 문항씩 신중하게 응답</li>
-                                        <li>• <strong>5개씩</strong>: 적절한 속도감, 역량별 그룹 단위 응답</li>
-                                        <li>• <strong>10개씩</strong>: 빠른 진행, 여러 문항 비교하며 응답</li>
-                                        <li>• <strong>전체</strong>: 모든 문항을 한눈에 보고 응답</li>
-                                    </ul>
-                                </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">척도 유형 *</label>
+                                <select id="scale-type" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="updateScaleLabels()">
+                                    <option value="single">1점 (O, X)</option>
+                                    <option value="3-point">3점 척도</option>
+                                    <option value="5-point" selected>5점 척도</option>
+                                    <option value="6-point">6점 척도</option>
+                                    <option value="7-point">7점 척도</option>
+                                    <option value="10-point">10점 척도</option>
+                                </select>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <button onclick="setQuestionDisplay(1)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-700">1개씩</div>
-                                    <div class="text-xs text-gray-500 mt-1">집중 모드</div>
-                                </div>
-                            </button>
-                            <button onclick="setQuestionDisplay(5)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-700">5개씩</div>
-                                    <div class="text-xs text-gray-500 mt-1">표준 모드</div>
-                                </div>
-                            </button>
-                            <button onclick="setQuestionDisplay(10)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-700">10개씩</div>
-                                    <div class="text-xs text-gray-500 mt-1">빠른 모드</div>
-                                </div>
-                            </button>
-                            <button onclick="setQuestionDisplay(-1)" class="display-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-700">전체</div>
-                                    <div class="text-xs text-gray-500 mt-1">전체 보기</div>
-                                </div>
-                            </button>
-                        </div>
-                        
-                        <div id="selected-display" class="mt-4 text-center text-sm text-gray-600">
-                            선택된 디스플레이: <span class="font-semibold text-blue-600">미선택</span>
+                        <!-- 척도 레이블 설정 -->
+                        <div id="scale-labels-container" class="bg-gray-50 rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-3">각 척도 숫자에 대한 의미를 설정하세요</p>
+                            <div id="scale-labels-grid" class="grid grid-cols-1 gap-3">
+                                <!-- 동적으로 생성됨 -->
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Step 3: 진단 시작 버튼 -->
-                    <div class="flex justify-center">
-                        <button onclick="startAssessment()" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled id="start-assessment-btn">
-                            <i class="fas fa-play mr-2"></i>진단 시작
+                    <!-- Step 3: 진단 문항 디스플레이 설정 -->
+                    <div id="display-settings-section" class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">3</span>
+                            진단 문항 디스플레이 설정
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">한 화면에 표시할 문항 수</label>
+                                <select id="display-count" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="setQuestionDisplayFromSelect()">
+                                    <option value="">선택하세요</option>
+                                    <option value="1">1개</option>
+                                    <option value="2">2개</option>
+                                    <option value="3">3개</option>
+                                    <option value="4">4개</option>
+                                    <option value="5">5개</option>
+                                    <option value="6">6개</option>
+                                    <option value="7">7개</option>
+                                    <option value="8">8개</option>
+                                    <option value="9">9개</option>
+                                    <option value="10">10개</option>
+                                    <option value="-1">전체</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 진단지 구성하기 버튼 -->
+                    <div class="flex justify-center mb-6">
+                        <button 
+                            id="compose-assessment-btn"
+                            onclick="composeAssessment()" 
+                            class="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+                            disabled
+                        >
+                            <i class="fas fa-file-alt mr-2"></i>진단지 구성하기
                         </button>
                     </div>
 
-                    <!-- 진단 문항 영역 (동적 생성) -->
-                    <div id="assessment-questions-area" class="mt-8 hidden">
-                        <div class="border-t pt-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-lg font-semibold text-gray-800">
-                                    진단 문항
-                                </h3>
-                                <div class="text-sm text-gray-600">
-                                    <span id="current-progress">0</span> / <span id="total-questions">0</span> 문항
-                                </div>
-                            </div>
-                            
-                            <!-- 문항 컨테이너 -->
-                            <div id="questions-container" class="space-y-6">
-                                <!-- 동적으로 생성됨 -->
-                            </div>
-
-                            <!-- 네비게이션 버튼 -->
-                            <div class="flex justify-between mt-8">
-                                <button onclick="previousPage()" id="prev-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                    <i class="fas fa-chevron-left mr-2"></i>이전
-                                </button>
-                                <button onclick="nextPage()" id="next-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    다음<i class="fas fa-chevron-right ml-2"></i>
-                                </button>
-                                <button onclick="submitAssessment()" id="submit-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hidden">
-                                    <i class="fas fa-check mr-2"></i>제출하기
-                                </button>
-                            </div>
+                    <!-- 역량 진단하기 영역 -->
+                    <div id="assessment-preview" class="hidden mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-clipboard-check text-green-600 mr-2"></i>역량 진단하기
+                        </h3>
+                        <div id="preview-content" class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                            <!-- 동적으로 생성됨 -->
                         </div>
                     </div>
                 </div>
@@ -893,7 +1028,7 @@ app.get('/', (c) => {
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">
                         <i class="fas fa-chart-bar text-green-600 mr-2"></i>
-                        Phase 2: 분석 및 인사이트
+                        결과 분석
                     </h2>
                     
                     <!-- 응답자 목록 -->
@@ -912,32 +1047,100 @@ app.get('/', (c) => {
             <!-- ACTION Tab -->
             <div id="tab-action" class="tab-content hidden">
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
                         <i class="fas fa-rocket text-orange-600 mr-2"></i>
-                        Phase 3: AI 실행 지원
+                        실행 지원
                     </h2>
                     
-                    <!-- AI 코칭 챗봇 -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                            <i class="fas fa-comments text-blue-600 mr-2"></i>AI 코칭
-                        </h3>
-                        <div id="chat-container" class="border rounded-lg p-4 mb-4 h-[400px] overflow-y-auto bg-gray-50">
+                    <!-- AI 어시스턴트 선택 -->
+                    <div id="assistant-selection" class="mb-6">
+                        <p class="text-gray-600 mb-4">원하시는 AI 어시스턴트를 선택하여 대화를 시작하세요</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- AI 컨설팅 -->
+                            <button onclick="selectAssistant('consulting')" class="assistant-card group p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-briefcase text-white text-2xl"></i>
+                                    </div>
+                                    <h3 class="font-bold text-gray-800 mb-2">AI 컨설팅</h3>
+                                    <p class="text-sm text-gray-600">전략적 관점에서 조직 역량 개발 방향 제시</p>
+                                </div>
+                            </button>
+                            
+                            <!-- AI 코칭 -->
+                            <button onclick="selectAssistant('coaching')" class="assistant-card group p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-comments text-white text-2xl"></i>
+                                    </div>
+                                    <h3 class="font-bold text-gray-800 mb-2">AI 코칭</h3>
+                                    <p class="text-sm text-gray-600">질문과 대화를 통한 자기주도적 역량 개발</p>
+                                </div>
+                            </button>
+                            
+                            <!-- AI 멘토링 -->
+                            <button onclick="selectAssistant('mentoring')" class="assistant-card group p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-user-tie text-white text-2xl"></i>
+                                    </div>
+                                    <h3 class="font-bold text-gray-800 mb-2">AI 멘토링</h3>
+                                    <p class="text-sm text-gray-600">경험 공유와 실무 조언으로 성장 가속화</p>
+                                </div>
+                            </button>
+                            
+                            <!-- AI 티칭 -->
+                            <button onclick="selectAssistant('teaching')" class="assistant-card group p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-chalkboard-teacher text-white text-2xl"></i>
+                                    </div>
+                                    <h3 class="font-bold text-gray-800 mb-2">AI 티칭</h3>
+                                    <p class="text-sm text-gray-600">체계적인 학습과 실습으로 역량 강화</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 대화 영역 (초기 숨김) -->
+                    <div id="chat-area" class="hidden">
+                        <!-- 선택된 어시스턴트 헤더 -->
+                        <div id="assistant-header" class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div id="assistant-avatar" class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                                    <i class="fas fa-robot text-blue-600 text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 id="assistant-name" class="font-bold text-white text-lg">AI 어시스턴트</h3>
+                                    <p id="assistant-status" class="text-blue-100 text-sm">온라인</p>
+                                </div>
+                            </div>
+                            <button onclick="resetAssistant()" class="text-white hover:bg-white/20 rounded-lg px-3 py-2 transition-colors">
+                                <i class="fas fa-times mr-1"></i>다른 어시스턴트 선택
+                            </button>
+                        </div>
+                        
+                        <!-- 채팅 컨테이너 -->
+                        <div id="chat-container" class="border-x border-gray-300 p-6 h-[500px] overflow-y-auto bg-gray-50">
                             <div class="text-gray-500 text-sm text-center py-8">
-                                역량 진단 결과에 대해 AI 코치와 대화를 시작하세요
+                                대화를 시작하세요
                             </div>
                         </div>
-                        <div class="flex gap-2">
-                            <input 
-                                type="text" 
-                                id="chat-input" 
-                                placeholder="질문을 입력하세요..."
-                                class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                onkeypress="if(event.key === 'Enter') sendChatMessage()"
-                            >
-                            <button onclick="sendChatMessage()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
+                        
+                        <!-- 입력 영역 -->
+                        <div class="bg-white border border-gray-300 rounded-b-xl p-4">
+                            <div class="flex gap-3">
+                                <input 
+                                    type="text" 
+                                    id="chat-input" 
+                                    placeholder="메시지를 입력하세요..."
+                                    class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
+                                    onkeypress="if(event.key === 'Enter') sendChatMessage()"
+                                >
+                                <button onclick="sendChatMessage()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
+                                    <i class="fas fa-paper-plane mr-2"></i>전송
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -945,7 +1148,7 @@ app.get('/', (c) => {
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app.js?v=2"></script>
+        <script src="/static/app.js?v=25"></script>
     </body>
     </html>
   `)
