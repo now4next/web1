@@ -17,11 +17,19 @@ app.use('/static/*', serveStatic({ root: './public' }))
 
 // 역량 모델 목록 조회
 app.get('/api/competency-models', async (c) => {
-  const db = c.env.DB
-  const { results } = await db.prepare(`
-    SELECT * FROM competency_models ORDER BY created_at DESC
-  `).all()
-  return c.json({ success: true, data: results })
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, data: [], message: 'Database not configured' })
+    }
+    const { results } = await db.prepare(`
+      SELECT * FROM competency_models ORDER BY created_at DESC
+    `).all()
+    return c.json({ success: true, data: results })
+  } catch (error) {
+    console.error('Error:', error)
+    return c.json({ success: false, data: [], error: 'Database error' }, 500)
+  }
 })
 
 // 역량 모델 생성
@@ -39,34 +47,62 @@ app.post('/api/competency-models', async (c) => {
 
 // 역량 키워드 검색 (먼저 정의해야 함!)
 app.get('/api/competencies/search', async (c) => {
-  const db = c.env.DB
-  const query = c.req.query('q') || ''
-  
-  const { results } = await db.prepare(`
-    SELECT c.*, cm.name as model_name, cm.type as model_type
-    FROM competencies c
-    JOIN competency_models cm ON c.model_id = cm.id
-    WHERE c.keyword LIKE ? OR c.description LIKE ?
-    ORDER BY c.created_at DESC
-  `).bind(`%${query}%`, `%${query}%`).all()
-  
-  return c.json({ success: true, data: results })
+  try {
+    const db = c.env.DB
+    
+    // D1이 설정되지 않은 경우 빈 결과 반환
+    if (!db) {
+      return c.json({ 
+        success: true, 
+        data: [],
+        message: 'Database not configured. Please set up D1 database binding.' 
+      })
+    }
+    
+    const query = c.req.query('q') || ''
+    
+    const { results } = await db.prepare(`
+      SELECT c.*, cm.name as model_name, cm.type as model_type
+      FROM competencies c
+      JOIN competency_models cm ON c.model_id = cm.id
+      WHERE c.keyword LIKE ? OR c.description LIKE ?
+      ORDER BY c.created_at DESC
+    `).bind(`%${query}%`, `%${query}%`).all()
+    
+    return c.json({ success: true, data: results })
+  } catch (error) {
+    console.error('Search error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Database error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      data: []
+    }, 500)
+  }
 })
 
 // 특정 모델의 역량 키워드 조회
 app.get('/api/competencies/:modelId', async (c) => {
-  const db = c.env.DB
-  const modelId = c.req.param('modelId')
-  
-  const { results } = await db.prepare(`
-    SELECT c.*, cm.name as model_name, cm.type as model_type
-    FROM competencies c
-    JOIN competency_models cm ON c.model_id = cm.id
-    WHERE c.model_id = ?
-    ORDER BY c.created_at DESC
-  `).bind(modelId).all()
-  
-  return c.json({ success: true, data: results })
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, data: [], message: 'Database not configured' })
+    }
+    const modelId = c.req.param('modelId')
+    
+    const { results } = await db.prepare(`
+      SELECT c.*, cm.name as model_name, cm.type as model_type
+      FROM competencies c
+      JOIN competency_models cm ON c.model_id = cm.id
+      WHERE c.model_id = ?
+      ORDER BY c.created_at DESC
+    `).bind(modelId).all()
+    
+    return c.json({ success: true, data: results })
+  } catch (error) {
+    console.error('Error:', error)
+    return c.json({ success: false, data: [], error: 'Database error' }, 500)
+  }
 })
 
 // 역량 키워드 추가
