@@ -909,6 +909,80 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
   return c.json({ success: true, insights, demo: isDemo })
 })
 
+// 저장된 대화 내용 조회 API
+app.get('/api/ai/coaching-history/:assistantType', async (c) => {
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, messages: [] })
+    }
+    
+    const assistantType = c.req.param('assistantType')
+    
+    // coaching_sessions 테이블에서 해당 어시스턴트 타입의 최근 대화 조회
+    const { results } = await db.prepare(`
+      SELECT session_data, updated_at FROM coaching_sessions 
+      WHERE session_data LIKE ?
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).bind(`%"assistantType":"${assistantType}"%`).all()
+    
+    if (results && results.length > 0 && results[0].session_data) {
+      try {
+        const sessionData = JSON.parse(results[0].session_data as string)
+        if (sessionData.assistantType === assistantType && sessionData.messages) {
+          return c.json({ 
+            success: true, 
+            messages: sessionData.messages,
+            lastUpdate: results[0].updated_at
+          })
+        }
+      } catch (parseError) {
+        console.error('Error parsing session data:', parseError)
+      }
+    }
+    
+    return c.json({ success: true, messages: [] })
+  } catch (error) {
+    console.error('Error fetching coaching history:', error)
+    return c.json({ success: true, messages: [] })
+  }
+})
+
+// 대화 내용 저장 API
+app.post('/api/ai/coaching-save', async (c) => {
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, message: 'Database not configured' })
+    }
+    
+    const body = await c.req.json()
+    const { assistantType, messages, respondentId } = body
+    
+    const sessionData = JSON.stringify({
+      assistantType,
+      messages,
+      savedAt: new Date().toISOString()
+    })
+    
+    // coaching_sessions 테이블에 저장
+    await db.prepare(`
+      INSERT INTO coaching_sessions 
+      (respondent_id, session_data, created_at, updated_at)
+      VALUES (?, ?, datetime('now'), datetime('now'))
+    `).bind(
+      respondentId || 1,
+      sessionData
+    ).run()
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Error saving coaching session:', error)
+    return c.json({ success: false, error: 'Failed to save session' }, 500)
+  }
+})
+
 // AI 코칭 API
 app.post('/api/ai/coaching', async (c) => {
   const apiKey = c.env.OPENAI_API_KEY

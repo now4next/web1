@@ -873,7 +873,7 @@ const assistantProfiles = {
 }
 
 // 어시스턴트 선택
-function selectAssistant(type) {
+async function selectAssistant(type) {
   currentAssistant = type
   const profile = assistantProfiles[type]
   
@@ -890,11 +890,42 @@ function selectAssistant(type) {
   
   document.getElementById('assistant-name').textContent = profile.name
   
-  // 채팅 초기화 및 인사말 추가
-  chatMessages = [
-    { role: 'assistant', content: profile.greeting, isGreeting: true }
-  ]
-  updateChatUI()
+  // 저장된 대화 내용 로드 시도
+  try {
+    const response = await axios.get(`/api/ai/coaching-history/${type}`)
+    
+    if (response.data.success && response.data.messages && response.data.messages.length > 0) {
+      // 저장된 대화가 있으면 로드
+      chatMessages = response.data.messages
+      
+      // 저장된 대화 알림 추가
+      const container = document.getElementById('chat-container')
+      container.innerHTML = `
+        <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-history text-blue-600"></i>
+            <span class="text-sm text-blue-800 font-medium">이전 대화를 불러왔습니다</span>
+          </div>
+          <p class="text-xs text-blue-600 mt-1">마지막 업데이트: ${new Date(response.data.lastUpdate).toLocaleString('ko-KR')}</p>
+        </div>
+      ` + container.innerHTML
+      
+      updateChatUI()
+    } else {
+      // 저장된 대화가 없으면 인사말로 시작
+      chatMessages = [
+        { role: 'assistant', content: profile.greeting, isGreeting: true }
+      ]
+      updateChatUI()
+    }
+  } catch (error) {
+    console.error('Error loading chat history:', error)
+    // 에러 시 인사말로 시작
+    chatMessages = [
+      { role: 'assistant', content: profile.greeting, isGreeting: true }
+    ]
+    updateChatUI()
+  }
   
   // 입력 포커스
   document.getElementById('chat-input').focus()
@@ -902,6 +933,12 @@ function selectAssistant(type) {
 
 // 어시스턴트 재선택
 function resetAssistant() {
+  // 대화 내용이 있으면 확인
+  if (chatMessages.length > 1) { // 인사말 제외
+    const confirmed = confirm('대화 내역은 자동으로 저장됩니다.\n다른 어시스턴트를 선택하시겠습니까?')
+    if (!confirmed) return
+  }
+  
   currentAssistant = null
   chatMessages = []
   
@@ -942,6 +979,9 @@ async function sendChatMessage() {
     if (response.data.success) {
       chatMessages.push({ role: 'assistant', content: response.data.message })
       updateChatUI()
+      
+      // 대화 내용 자동 저장
+      saveChatHistory()
     } else {
       alert(response.data.error)
     }
@@ -988,6 +1028,29 @@ function showTypingIndicator() {
 function hideTypingIndicator() {
   const indicator = document.getElementById('typing-indicator')
   if (indicator) indicator.remove()
+}
+
+// 대화 내용 저장
+async function saveChatHistory() {
+  if (!currentAssistant || chatMessages.length === 0) return
+  
+  try {
+    // 인사말 제외하고 저장
+    const messagesToSave = chatMessages.filter(m => !m.isGreeting)
+    
+    if (messagesToSave.length === 0) return
+    
+    await axios.post('/api/ai/coaching-save', {
+      assistantType: currentAssistant,
+      messages: chatMessages, // 모든 메시지 저장 (인사말 포함)
+      respondentId: 1 // 현재는 기본값, 추후 실제 respondent_id 사용
+    })
+    
+    console.log('✅ Chat history saved')
+  } catch (error) {
+    console.error('Error saving chat history:', error)
+    // 저장 실패해도 사용자 경험에 영향 없음
+  }
 }
 
 // 채팅 UI 업데이트
