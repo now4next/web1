@@ -1932,7 +1932,6 @@ async function composeAssessment() {
   const name = document.getElementById('exec-name').value.trim()
   const email = document.getElementById('exec-email').value.trim()
   const department = document.getElementById('exec-department').value.trim()
-  const position = document.getElementById('exec-position').value.trim()
   const level = document.getElementById('exec-level').value
   
   if (!name || !email) {
@@ -1947,7 +1946,7 @@ async function composeAssessment() {
   
   // 응답자 정보 저장
   currentRespondentInfo = {
-    name, email, department, position, level
+    name, email, department, level
   }
   
   // 척도 설정 저장

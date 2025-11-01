@@ -1217,15 +1217,6 @@ app.get('/', (c) => {
                                 >
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">직위</label>
-                                <input 
-                                    type="text" 
-                                    id="exec-position" 
-                                    placeholder="과장"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                >
-                            </div>
-                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
                                 <select id="exec-level" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                     <option value="junior">사원/대리</option>
