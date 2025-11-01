@@ -1218,11 +1218,12 @@ app.get('/', (c) => {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
-                                <select id="exec-level" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                    <option value="junior">사원/대리</option>
-                                    <option value="senior">과장/차장</option>
-                                    <option value="manager">팀장 이상</option>
-                                </select>
+                                <input 
+                                    type="text" 
+                                    id="exec-level" 
+                                    placeholder="예: 사원, 대리, 과장, 차장, 팀장"
+                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                >
                             </div>
                         </div>
                     </div>
