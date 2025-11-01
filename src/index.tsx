@@ -649,16 +649,25 @@ app.get('/api/analysis/:respondentId/insights', async (c) => {
     
     const respondentId = c.req.param('respondentId')
     
-    // 저장된 인사이트 조회
+    // 저장된 인사이트 조회 (coaching_sessions 테이블 활용)
     const { results } = await db.prepare(`
-      SELECT ai_insight FROM analysis_results 
-      WHERE respondent_id = ? AND ai_insight IS NOT NULL 
+      SELECT session_data FROM coaching_sessions 
+      WHERE respondent_id = ? 
+      AND session_data LIKE '%overall%'
+      ORDER BY updated_at DESC
       LIMIT 1
     `).bind(respondentId).all()
     
-    if (results && results.length > 0 && results[0].ai_insight) {
-      const insights = JSON.parse(results[0].ai_insight as string)
-      return c.json({ success: true, insights, cached: true })
+    if (results && results.length > 0 && results[0].session_data) {
+      try {
+        const insights = JSON.parse(results[0].session_data as string)
+        // 유효한 인사이트인지 확인
+        if (insights.overall && insights.strengths && insights.improvements && insights.recommendations) {
+          return c.json({ success: true, insights, cached: true })
+        }
+      } catch (parseError) {
+        console.error('Error parsing insights:', parseError)
+      }
     }
     
     return c.json({ success: true, insights: null })
@@ -757,23 +766,20 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
   }
   
   // DB에 인사이트 저장 (있으면)
-  if (db && body.analysis && body.analysis.length > 0) {
+  if (db) {
     try {
       const insightsJson = JSON.stringify(insights)
       
-      // 각 역량별로 저장 (첫 번째 역량에만 저장)
-      for (const comp of body.analysis) {
-        await db.prepare(`
-          INSERT OR REPLACE INTO analysis_results 
-          (respondent_id, competency_id, avg_score, ai_insight, session_id)
-          VALUES (?, ?, ?, ?, 1)
-        `).bind(
-          respondentId,
-          comp.competency_id || 1,
-          comp.average,
-          insightsJson
-        ).run()
-      }
+      // coaching_sessions 테이블에 인사이트 저장
+      // respondent_id가 존재하는지 확인 필요 없음 (ON DELETE CASCADE)
+      await db.prepare(`
+        INSERT INTO coaching_sessions 
+        (respondent_id, session_data, created_at, updated_at)
+        VALUES (?, ?, datetime('now'), datetime('now'))
+      `).bind(
+        respondentId,
+        insightsJson
+      ).run()
     } catch (dbError) {
       console.error('Failed to save insights to DB:', dbError)
       // DB 저장 실패해도 인사이트는 반환
