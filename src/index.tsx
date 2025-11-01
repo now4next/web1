@@ -639,15 +639,48 @@ app.get('/api/analysis/:respondentId', async (c) => {
 })
 
 // AI 인사이트 생성
+// AI 인사이트 조회 API
+app.get('/api/analysis/:respondentId/insights', async (c) => {
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, insights: null })
+    }
+    
+    const respondentId = c.req.param('respondentId')
+    
+    // 저장된 인사이트 조회
+    const { results } = await db.prepare(`
+      SELECT ai_insight FROM analysis_results 
+      WHERE respondent_id = ? AND ai_insight IS NOT NULL 
+      LIMIT 1
+    `).bind(respondentId).all()
+    
+    if (results && results.length > 0 && results[0].ai_insight) {
+      const insights = JSON.parse(results[0].ai_insight as string)
+      return c.json({ success: true, insights, cached: true })
+    }
+    
+    return c.json({ success: true, insights: null })
+  } catch (error) {
+    console.error('Error fetching insights:', error)
+    return c.json({ success: true, insights: null })
+  }
+})
+
 app.post('/api/analysis/:respondentId/insights', async (c) => {
+  const db = c.env.DB
   const apiKey = c.env.OPENAI_API_KEY
   const respondentId = c.req.param('respondentId')
   const body = await c.req.json()
   
+  let insights
+  let isDemo = false
+  
   // 데모 모드 또는 실제 AI 사용
   if (!apiKey || apiKey === 'your-openai-api-key-here') {
     // 데모 인사이트
-    const demoInsights = {
+    insights = {
       overall: `${body.respondent.name}님의 전체 평균 점수는 ${body.summary.overallAverage}점으로, 전반적으로 우수한 역량 수준을 보이고 있습니다.`,
       strengths: `특히 ${body.summary.strengths.join(', ')} 역량에서 강점을 보이고 있습니다. 이러한 강점을 더욱 발전시켜 조직의 핵심 인재로 성장할 수 있습니다.`,
       improvements: `${body.summary.improvements.join(', ')} 역량은 개선이 필요한 영역입니다. 체계적인 학습과 실무 경험을 통해 향상시킬 수 있습니다.`,
@@ -658,11 +691,10 @@ app.post('/api/analysis/:respondentId/insights', async (c) => {
         '정기적인 피드백 세션으로 지속적 성장'
       ]
     }
-    return c.json({ success: true, insights: demoInsights, demo: true })
-  }
-  
-  // 실제 AI 인사이트 생성
-  const prompt = `당신은 조직 역량 진단 전문가입니다. 다음 진단 결과를 분석하고 인사이트를 제공해주세요.
+    isDemo = true
+  } else {
+    // 실제 AI 인사이트 생성
+    const prompt = `당신은 조직 역량 진단 전문가입니다. 다음 진단 결과를 분석하고 인사이트를 제공해주세요.
 
 응답자: ${body.respondent.name} (${body.respondent.position})
 전체 평균: ${body.summary.overallAverage}점
@@ -687,43 +719,68 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
 
 각 항목은 한국어로 작성하고, 실용적이고 구체적인 내용으로 작성해주세요.`
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: '당신은 조직 역량 진단 및 인재개발 전문가입니다.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        response_format: { type: 'json_object' }
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: '당신은 조직 역량 진단 및 인재개발 전문가입니다.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          response_format: { type: 'json_object' }
+        })
       })
-    })
-    
-    if (!response.ok) {
-      throw new Error('OpenAI API 오류')
+      
+      if (!response.ok) {
+        throw new Error('OpenAI API 오류')
+      }
+      
+      const data = await response.json() as any
+      const rawInsights = JSON.parse(data.choices[0].message.content)
+      
+      // OpenAI 응답 형식을 프론트엔드 형식으로 변환
+      insights = {
+        overall: rawInsights.overall?.evaluation || rawInsights.overall || '분석 결과가 없습니다.',
+        strengths: rawInsights.strengths?.analysis || rawInsights.strengths || '강점 분석 결과가 없습니다.',
+        improvements: rawInsights.improvements?.analysis || rawInsights.improvements || '개선 영역 분석 결과가 없습니다.',
+        recommendations: rawInsights.recommendations || []
+      }
+    } catch (error: any) {
+      return c.json({ success: false, error: error.message }, 500)
     }
-    
-    const data = await response.json() as any
-    const rawInsights = JSON.parse(data.choices[0].message.content)
-    
-    // OpenAI 응답 형식을 프론트엔드 형식으로 변환
-    const insights = {
-      overall: rawInsights.overall?.evaluation || rawInsights.overall || '분석 결과가 없습니다.',
-      strengths: rawInsights.strengths?.analysis || rawInsights.strengths || '강점 분석 결과가 없습니다.',
-      improvements: rawInsights.improvements?.analysis || rawInsights.improvements || '개선 영역 분석 결과가 없습니다.',
-      recommendations: rawInsights.recommendations || []
-    }
-    
-    return c.json({ success: true, insights, demo: false })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
   }
+  
+  // DB에 인사이트 저장 (있으면)
+  if (db && body.analysis && body.analysis.length > 0) {
+    try {
+      const insightsJson = JSON.stringify(insights)
+      
+      // 각 역량별로 저장 (첫 번째 역량에만 저장)
+      for (const comp of body.analysis) {
+        await db.prepare(`
+          INSERT OR REPLACE INTO analysis_results 
+          (respondent_id, competency_id, avg_score, ai_insight, session_id)
+          VALUES (?, ?, ?, ?, 1)
+        `).bind(
+          respondentId,
+          comp.competency_id || 1,
+          comp.average,
+          insightsJson
+        ).run()
+      }
+    } catch (dbError) {
+      console.error('Failed to save insights to DB:', dbError)
+      // DB 저장 실패해도 인사이트는 반환
+    }
+  }
+  
+  return c.json({ success: true, insights, demo: isDemo })
 })
 
 // AI 코칭 API

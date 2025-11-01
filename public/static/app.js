@@ -1039,7 +1039,7 @@ function renderAnalysisReport(data) {
           <p class="text-blue-100">${respondent.name} · ${respondent.position || '직책 미지정'}</p>
           <p class="text-sm text-blue-200">${respondent.email}</p>
         </div>
-        <button onclick="document.getElementById('analysis-report').classList.add('hidden')" 
+        <button onclick="document.getElementById('analysis-report').classList.add('hidden'); currentAnalysisData = null;" 
                 class="text-white hover:bg-white/20 rounded px-3 py-1">
           <i class="fas fa-times"></i>
         </button>
@@ -1166,19 +1166,17 @@ function renderAnalysisReport(data) {
         </h4>
       </div>
       <div class="text-center py-8">
-        <p class="text-gray-600 mb-4">AI 분석을 통해 맞춤형 인사이트와 발전 방향을 제공합니다</p>
-        <button 
-          onclick="generateAIInsights(${respondent.id})"
-          id="generate-insights-btn"
-          class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold shadow-lg">
-          <i class="fas fa-magic mr-2"></i>AI 인사이트 생성
-        </button>
+        <i class="fas fa-spinner fa-spin text-3xl text-purple-600 mb-2"></i>
+        <p class="text-gray-600">AI 인사이트를 불러오는 중...</p>
       </div>
     </div>
   `
   
   // 차트 렌더링
   renderCompetencyChart(analysis)
+  
+  // AI 인사이트 자동 로드
+  checkAndLoadInsights(respondent.id)
 }
 
 // 역량 차트 렌더링 - 세련된 수평 막대 차트
@@ -1335,8 +1333,51 @@ function renderCompetencyChart(analysis) {
   })
 }
 
+// AI 인사이트 확인 및 로드 (자동 호출)
+async function checkAndLoadInsights(respondentId) {
+  const insightsDiv = document.getElementById('ai-insights')
+  
+  try {
+    // 먼저 저장된 인사이트가 있는지 확인
+    const response = await axios.get(`/api/analysis/${respondentId}/insights`)
+    
+    if (response.data.success && response.data.insights) {
+      // 저장된 인사이트가 있으면 표시
+      displayInsights(response.data.insights, respondentId, response.data.cached)
+    } else {
+      // 저장된 인사이트가 없으면 생성 버튼 표시
+      showGenerateButton(respondentId)
+    }
+  } catch (error) {
+    console.error('Error checking insights:', error)
+    // 에러 시 생성 버튼 표시
+    showGenerateButton(respondentId)
+  }
+}
+
+// 생성 버튼 표시
+function showGenerateButton(respondentId) {
+  const insightsDiv = document.getElementById('ai-insights')
+  insightsDiv.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="text-lg font-semibold text-purple-800">
+        <i class="fas fa-brain mr-2"></i>AI 인사이트
+      </h4>
+    </div>
+    <div class="text-center py-8">
+      <p class="text-gray-600 mb-4">AI 분석을 통해 맞춤형 인사이트와 발전 방향을 제공합니다</p>
+      <button 
+        onclick="generateAIInsights(${respondentId})"
+        id="generate-insights-btn"
+        class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold shadow-lg">
+        <i class="fas fa-magic mr-2"></i>AI 인사이트 생성
+      </button>
+    </div>
+  `
+}
+
 // AI 인사이트 생성 (버튼 클릭 시)
-async function generateAIInsights(respondentId) {
+async function generateAIInsights(respondentId, isRegenerate = false) {
   console.log('🤖 Generating AI insights for respondent:', respondentId)
   
   if (!currentAnalysisData) {
@@ -1345,13 +1386,6 @@ async function generateAIInsights(respondentId) {
   }
   
   const insightsDiv = document.getElementById('ai-insights')
-  const generateBtn = document.getElementById('generate-insights-btn')
-  
-  // 버튼 비활성화 및 로딩 표시
-  if (generateBtn) {
-    generateBtn.disabled = true
-    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>생성 중...'
-  }
   
   insightsDiv.innerHTML = `
     <h4 class="text-lg font-semibold text-purple-800 mb-3">
@@ -1359,17 +1393,17 @@ async function generateAIInsights(respondentId) {
     </h4>
     <div class="text-center py-8">
       <i class="fas fa-spinner fa-spin text-3xl text-purple-600 mb-2"></i>
-      <p class="text-gray-600">AI가 인사이트를 생성하고 있습니다...</p>
+      <p class="text-gray-600">AI가 인사이트를 ${isRegenerate ? '재' : ''}생성하고 있습니다...</p>
       <p class="text-sm text-gray-500 mt-2">최대 1분 정도 소요될 수 있습니다</p>
     </div>
   `
   
-  // AI 인사이트 로드
-  await loadAIInsights(respondentId, currentAnalysisData)
+  // AI 인사이트 생성 및 로드
+  await createAIInsights(respondentId, currentAnalysisData)
 }
 
-// AI 인사이트 로드
-async function loadAIInsights(respondentId, analysisData) {
+// AI 인사이트 생성 및 표시
+async function createAIInsights(respondentId, analysisData) {
   const insightsDiv = document.getElementById('ai-insights')
   
   try {
@@ -1391,55 +1425,8 @@ async function loadAIInsights(respondentId, analysisData) {
       
       console.log('✅ Insights received:', insights)
       
-      insightsDiv.innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-          <h4 class="text-lg font-semibold text-purple-800">
-            <i class="fas fa-brain mr-2"></i>AI 인사이트
-          </h4>
-          ${isDemo ? '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">데모 모드</span>' : ''}
-        </div>
-        
-        <!-- 전반적 평가 -->
-        <div class="bg-white rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-gray-800 mb-2">
-            <i class="fas fa-star text-yellow-500 mr-2"></i>전반적 평가
-          </h5>
-          <p class="text-gray-700 leading-relaxed">${insights.overall}</p>
-        </div>
-        
-        <!-- 강점 분석 -->
-        <div class="bg-white rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-gray-800 mb-2">
-            <i class="fas fa-trophy text-green-500 mr-2"></i>강점 역량 분석
-          </h5>
-          <p class="text-gray-700 leading-relaxed">${insights.strengths}</p>
-        </div>
-        
-        <!-- 개선 영역 -->
-        <div class="bg-white rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-gray-800 mb-2">
-            <i class="fas fa-arrow-trend-up text-orange-500 mr-2"></i>개선 영역
-          </h5>
-          <p class="text-gray-700 leading-relaxed">${insights.improvements}</p>
-        </div>
-        
-        <!-- 역량 개발 추천 -->
-        <div class="bg-white rounded-lg p-4">
-          <h5 class="font-semibold text-gray-800 mb-3">
-            <i class="fas fa-lightbulb text-blue-500 mr-2"></i>역량 개발 추천
-          </h5>
-          <ul class="space-y-2">
-            ${insights.recommendations.map((rec, idx) => `
-              <li class="flex items-start text-gray-700">
-                <span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">
-                  ${idx + 1}
-                </span>
-                <span>${rec}</span>
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-      `
+      // 인사이트 표시
+      displayInsights(insights, respondentId, isDemo, false)
     } else {
       console.error('❌ API returned error:', response.data)
       throw new Error(response.data.error || 'API returned success: false')
@@ -1463,6 +1450,69 @@ async function loadAIInsights(respondentId, analysisData) {
       </div>
     `
   }
+}
+
+// AI 인사이트 표시
+function displayInsights(insights, respondentId, isDemo = false, isCached = false) {
+  const insightsDiv = document.getElementById('ai-insights')
+  
+  insightsDiv.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <h4 class="text-lg font-semibold text-purple-800">
+          <i class="fas fa-brain mr-2"></i>AI 인사이트
+        </h4>
+        ${isDemo ? '<span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">데모 모드</span>' : ''}
+        ${isCached ? '<span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded"><i class="fas fa-check-circle mr-1"></i>저장됨</span>' : ''}
+      </div>
+      <button 
+        onclick="generateAIInsights(${respondentId}, true)"
+        class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm transition-colors">
+        <i class="fas fa-redo mr-2"></i>재생성
+      </button>
+    </div>
+    
+    <!-- 전반적 평가 -->
+    <div class="bg-white rounded-lg p-4 mb-4">
+      <h5 class="font-semibold text-gray-800 mb-2">
+        <i class="fas fa-star text-yellow-500 mr-2"></i>전반적 평가
+      </h5>
+      <p class="text-gray-700 leading-relaxed">${insights.overall}</p>
+    </div>
+    
+    <!-- 강점 분석 -->
+    <div class="bg-white rounded-lg p-4 mb-4">
+      <h5 class="font-semibold text-gray-800 mb-2">
+        <i class="fas fa-trophy text-green-500 mr-2"></i>강점 역량 분석
+      </h5>
+      <p class="text-gray-700 leading-relaxed">${insights.strengths}</p>
+    </div>
+    
+    <!-- 개선 영역 -->
+    <div class="bg-white rounded-lg p-4 mb-4">
+      <h5 class="font-semibold text-gray-800 mb-2">
+        <i class="fas fa-arrow-trend-up text-orange-500 mr-2"></i>개선 영역
+      </h5>
+      <p class="text-gray-700 leading-relaxed">${insights.improvements}</p>
+    </div>
+    
+    <!-- 역량 개발 추천 -->
+    <div class="bg-white rounded-lg p-4">
+      <h5 class="font-semibold text-gray-800 mb-3">
+        <i class="fas fa-lightbulb text-blue-500 mr-2"></i>역량 개발 추천
+      </h5>
+      <ul class="space-y-2">
+        ${insights.recommendations.map((rec, idx) => `
+          <li class="flex items-start text-gray-700">
+            <span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mr-2">
+              ${idx + 1}
+            </span>
+            <span>${rec}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `
 }
 
 // 탭 전환 시 응답자 목록 로드
