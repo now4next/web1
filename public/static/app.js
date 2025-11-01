@@ -1860,7 +1860,32 @@ function renderScaleButtons(questionIdx, currentResponse) {
   `
 }
 
-// 문항 디스플레이 설정 (드롭다운)
+// 문항 디스플레이 설정 (버튼 방식)
+function setQuestionDisplay(count) {
+  // -1이면 '전체' 선택
+  if (count === -1) {
+    questionsPerPage = null
+  } else {
+    questionsPerPage = count
+  }
+  
+  // 모든 버튼의 선택 상태 초기화
+  document.querySelectorAll('.display-option-btn').forEach(btn => {
+    btn.classList.remove('border-blue-600', 'bg-blue-100', 'text-blue-700')
+    btn.classList.add('border-gray-300', 'text-gray-700')
+  })
+  
+  // 클릭된 버튼을 활성 상태로 변경
+  event.target.classList.remove('border-gray-300', 'text-gray-700')
+  event.target.classList.add('border-blue-600', 'bg-blue-100', 'text-blue-700')
+  
+  // 진단지 구성하기 버튼 상태 체크
+  checkComposeButtonState()
+  
+  console.log('Questions per page set to:', questionsPerPage === null ? 'All' : questionsPerPage)
+}
+
+// 문항 디스플레이 설정 (드롭다운 - 레거시)
 function setQuestionDisplayFromSelect() {
   const selectElement = document.getElementById('display-count')
   if (!selectElement) return
@@ -1880,16 +1905,18 @@ function setQuestionDisplayFromSelect() {
 function checkComposeButtonState() {
   const nameElement = document.getElementById('exec-name')
   const emailElement = document.getElementById('exec-email')
-  const displayElement = document.getElementById('display-count')
   const composeBtn = document.getElementById('compose-assessment-btn')
   
-  if (!nameElement || !emailElement || !displayElement || !composeBtn) {
+  if (!nameElement || !emailElement || !composeBtn) {
     return
   }
   
   const name = nameElement.value.trim()
   const email = emailElement.value.trim()
-  const hasDisplay = displayElement.value !== ''
+  
+  // questionsPerPage가 설정되어 있는지 확인 (버튼 방식)
+  // null(전체)이거나 숫자면 설정된 것으로 간주
+  const hasDisplay = questionsPerPage !== undefined
   
   if (name && email && hasDisplay) {
     composeBtn.disabled = false

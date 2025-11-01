@@ -1271,23 +1271,42 @@ app.get('/', (c) => {
                             <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">3</span>
                             진단 문항 디스플레이 설정
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">한 화면에 표시할 문항 수</label>
-                                <select id="display-count" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="setQuestionDisplayFromSelect()">
-                                    <option value="">선택하세요</option>
-                                    <option value="1">1개</option>
-                                    <option value="2">2개</option>
-                                    <option value="3">3개</option>
-                                    <option value="4">4개</option>
-                                    <option value="5">5개</option>
-                                    <option value="6">6개</option>
-                                    <option value="7">7개</option>
-                                    <option value="8">8개</option>
-                                    <option value="9">9개</option>
-                                    <option value="10">10개</option>
-                                    <option value="-1">전체</option>
-                                </select>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-3">한 화면에 표시할 문항 수</label>
+                            <div class="grid grid-cols-6 md:grid-cols-11 gap-2">
+                                <button onclick="setQuestionDisplay(1)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    1개
+                                </button>
+                                <button onclick="setQuestionDisplay(2)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    2개
+                                </button>
+                                <button onclick="setQuestionDisplay(3)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    3개
+                                </button>
+                                <button onclick="setQuestionDisplay(4)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    4개
+                                </button>
+                                <button onclick="setQuestionDisplay(5)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    5개
+                                </button>
+                                <button onclick="setQuestionDisplay(6)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    6개
+                                </button>
+                                <button onclick="setQuestionDisplay(7)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    7개
+                                </button>
+                                <button onclick="setQuestionDisplay(8)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    8개
+                                </button>
+                                <button onclick="setQuestionDisplay(9)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    9개
+                                </button>
+                                <button onclick="setQuestionDisplay(10)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    10개
+                                </button>
+                                <button onclick="setQuestionDisplay(-1)" class="display-option-btn h-12 bg-white border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors font-medium text-gray-700 hover:text-blue-600">
+                                    전체
+                                </button>
                             </div>
                         </div>
                     </div>
