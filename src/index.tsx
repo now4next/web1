@@ -118,6 +118,72 @@ app.post('/api/competencies', async (c) => {
   return c.json({ success: true, id: result.meta.last_row_id })
 })
 
+// 저장된 문항 조회 API
+app.post('/api/ai/get-saved-questions', async (c) => {
+  try {
+    const db = c.env.DB
+    if (!db) {
+      return c.json({ success: true, data: null })
+    }
+    
+    const body = await c.req.json<{ competency_keywords: string[] }>()
+    
+    const savedData = {
+      behavioral_indicators: [] as any[],
+      questions: [] as any[]
+    }
+    
+    // 각 역량별로 저장된 행동지표와 문항 조회
+    for (const keyword of body.competency_keywords) {
+      // 역량 ID 조회
+      const { results: compResults } = await db.prepare(`
+        SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+      `).bind(keyword).all()
+      
+      if (compResults && compResults.length > 0) {
+        const competencyId = compResults[0].id
+        
+        // 행동지표 조회
+        const { results: indicators } = await db.prepare(`
+          SELECT indicator_text FROM behavioral_indicators 
+          WHERE competency_id = ?
+        `).bind(competencyId).all()
+        
+        if (indicators && indicators.length > 0) {
+          savedData.behavioral_indicators.push({
+            competency: keyword,
+            indicators: indicators.map((ind: any) => ind.indicator_text)
+          })
+        }
+        
+        // 진단문항 조회
+        const { results: questions } = await db.prepare(`
+          SELECT question_text, question_type FROM assessment_questions 
+          WHERE competency_id = ?
+        `).bind(competencyId).all()
+        
+        if (questions && questions.length > 0) {
+          savedData.questions.push(...questions.map((q: any) => ({
+            competency: keyword,
+            question_text: q.question_text,
+            question_type: q.question_type
+          })))
+        }
+      }
+    }
+    
+    // 모든 역량에 대한 데이터가 있으면 반환
+    if (savedData.behavioral_indicators.length === body.competency_keywords.length) {
+      return c.json({ success: true, data: savedData })
+    }
+    
+    return c.json({ success: true, data: null })
+  } catch (error) {
+    console.error('Error fetching saved questions:', error)
+    return c.json({ success: true, data: null })
+  }
+})
+
 // AI 문항 생성 API
 app.post('/api/ai/generate-questions', async (c) => {
   const db = c.env.DB
@@ -222,6 +288,60 @@ app.post('/api/ai/generate-questions', async (c) => {
     
     const data = await response.json() as any
     const content = JSON.parse(data.choices[0].message.content)
+    
+    // DB에 저장 (있으면)
+    if (db) {
+      try {
+        for (const behavioralItem of content.behavioral_indicators || []) {
+          // 역량 ID 조회
+          const { results: compResults } = await db.prepare(`
+            SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+          `).bind(behavioralItem.competency).all()
+          
+          if (compResults && compResults.length > 0) {
+            const competencyId = compResults[0].id
+            
+            // 행동지표 저장
+            for (const indicator of behavioralItem.indicators || []) {
+              try {
+                await db.prepare(`
+                  INSERT INTO behavioral_indicators (competency_id, indicator_text)
+                  VALUES (?, ?)
+                `).bind(competencyId, indicator).run()
+              } catch (insertError) {
+                console.error('Error inserting indicator:', insertError)
+                // 중복 등의 오류는 무시하고 계속 진행
+              }
+            }
+          }
+        }
+        
+        // 진단문항 저장
+        for (const question of content.questions || []) {
+          // 역량 ID 조회
+          const { results: compResults } = await db.prepare(`
+            SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+          `).bind(question.competency).all()
+          
+          if (compResults && compResults.length > 0) {
+            const competencyId = compResults[0].id
+            
+            try {
+              await db.prepare(`
+                INSERT INTO assessment_questions (competency_id, question_text, question_type)
+                VALUES (?, ?, ?)
+              `).bind(competencyId, question.question_text, question.question_type).run()
+            } catch (insertError) {
+              console.error('Error inserting question:', insertError)
+              // 중복 등의 오류는 무시하고 계속 진행
+            }
+          }
+        }
+      } catch (dbError) {
+        console.error('Error saving to database:', dbError)
+        // DB 저장 실패해도 생성된 데이터는 반환
+      }
+    }
     
     return c.json({ success: true, data: content })
   } catch (error: any) {

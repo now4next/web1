@@ -184,7 +184,39 @@ async function generateQuestions() {
     contentDiv.innerHTML = `
       <div class="text-center py-8">
         <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600">AI가 진단 문항을 생성하고 있습니다...</p>
+        <p class="text-gray-600">저장된 문항을 확인하고 있습니다...</p>
+      </div>
+    `
+    
+    // 먼저 저장된 문항 확인
+    const savedResponse = await axios.post('/api/ai/get-saved-questions', {
+      competency_keywords: selectedCompetencies.map(c => c.keyword)
+    })
+    
+    if (savedResponse.data.success && savedResponse.data.data) {
+      // 저장된 문항이 있으면 표시
+      const savedData = savedResponse.data.data
+      
+      generatedData = {
+        behavioral_indicators: savedData.behavioral_indicators,
+        questions: savedData.questions,
+        guide: `📋 저장된 진단 문항\n\n본 진단은 ${selectedCompetencies.map(c => c.keyword).join(', ')} 역량을 평가하기 위한 진단입니다.\n\n✅ 이 문항들은 이전에 생성되어 저장된 문항입니다.\n\n💡 추가 문항이 필요하시면 "AI 문항 추가 생성" 버튼을 클릭하세요.`
+      }
+      
+      editableQuestions = savedData.questions.map((q, idx) => ({
+        id: idx,
+        ...q
+      }))
+      
+      renderGeneratedQuestions(generatedData, false, true)
+      return
+    }
+    
+    // 저장된 문항이 없으면 AI 생성
+    contentDiv.innerHTML = `
+      <div class="text-center py-8">
+        <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+        <p class="text-gray-600">AI가 새로운 진단 문항을 생성하고 있습니다...</p>
       </div>
     `
     
@@ -234,10 +266,29 @@ async function generateQuestions() {
 }
 
 // 생성된 문항 렌더링 (편집 가능)
-function renderGeneratedQuestions(data, isDemo) {
+function renderGeneratedQuestions(data, isDemo, isSaved = false) {
   const contentDiv = document.getElementById('generation-content')
   
   contentDiv.innerHTML = `
+    ${isSaved ? `
+    <!-- 저장된 문항 알림 -->
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <i class="fas fa-check-circle text-green-600 mr-2"></i>
+          <div>
+            <h4 class="font-semibold text-green-900 mb-1">저장된 문항 로드됨</h4>
+            <p class="text-green-800 text-sm">
+              이전에 생성된 문항을 불러왔습니다. 추가 문항이 필요하시면 아래 버튼을 클릭하세요.
+            </p>
+          </div>
+        </div>
+        <button onclick="generateAdditionalQuestions()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap ml-4">
+          <i class="fas fa-plus mr-2"></i>AI 문항 추가 생성
+        </button>
+      </div>
+    </div>
+    ` : ''}
     ${isDemo ? `
     <!-- 데모 모드 알림 -->
     <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
@@ -306,6 +357,101 @@ function renderGeneratedQuestions(data, isDemo) {
   `
   
   renderQuestions()
+}
+
+// 추가 문항 생성
+async function generateAdditionalQuestions() {
+  if (selectedCompetencies.length === 0) {
+    alert('역량을 먼저 선택해주세요')
+    return
+  }
+  
+  const targetLevel = document.getElementById('target-level').value
+  const questionType = document.getElementById('question-type').value
+  
+  const contentDiv = document.getElementById('generation-content')
+  
+  // 현재 문항 개수 저장
+  const currentQuestionCount = editableQuestions.length
+  const currentIndicatorCount = generatedData?.behavioral_indicators?.length || 0
+  
+  try {
+    // 로딩 오버레이 추가
+    const loadingOverlay = document.createElement('div')
+    loadingOverlay.id = 'loading-overlay'
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+    loadingOverlay.innerHTML = `
+      <div class="bg-white rounded-lg p-8 max-w-md">
+        <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+        <p class="text-gray-600">추가 문항을 생성하고 있습니다...</p>
+        <p class="text-sm text-gray-500 mt-2">최대 1분 정도 소요될 수 있습니다</p>
+      </div>
+    `
+    document.body.appendChild(loadingOverlay)
+    
+    const response = await axios.post('/api/ai/generate-questions', {
+      competency_keywords: selectedCompetencies.map(c => c.keyword),
+      target_level: targetLevel,
+      question_type: questionType
+    }, {
+      timeout: 60000
+    })
+    
+    // 로딩 오버레이 제거
+    document.body.removeChild(loadingOverlay)
+    
+    if (response.data.success) {
+      const newData = response.data.data
+      
+      // 기존 데이터에 추가
+      if (!generatedData) {
+        generatedData = { behavioral_indicators: [], questions: [], guide: '' }
+      }
+      
+      // 행동지표 추가 (중복 제거)
+      for (const newBi of newData.behavioral_indicators || []) {
+        const exists = generatedData.behavioral_indicators.some(
+          bi => bi.competency === newBi.competency
+        )
+        if (!exists) {
+          generatedData.behavioral_indicators.push(newBi)
+        } else {
+          // 기존 역량에 새 지표 추가
+          const existing = generatedData.behavioral_indicators.find(
+            bi => bi.competency === newBi.competency
+          )
+          if (existing) {
+            existing.indicators = [...existing.indicators, ...newBi.indicators]
+          }
+        }
+      }
+      
+      // 문항 추가
+      const startId = editableQuestions.length
+      const newQuestions = newData.questions.map((q, idx) => ({
+        id: startId + idx,
+        ...q
+      }))
+      
+      editableQuestions = [...editableQuestions, ...newQuestions]
+      generatedData.questions = [...generatedData.questions, ...newData.questions]
+      
+      // 다시 렌더링
+      renderGeneratedQuestions(generatedData, response.data.demo, false)
+      
+      // 성공 메시지
+      alert(`✅ 새로운 문항이 추가되었습니다!\n\n행동지표: ${generatedData.behavioral_indicators.length - currentIndicatorCount}개 추가\n진단문항: ${editableQuestions.length - currentQuestionCount}개 추가`)
+    } else {
+      alert('문항 생성에 실패했습니다: ' + response.data.error)
+    }
+  } catch (error) {
+    console.error('Error generating additional questions:', error)
+    // 로딩 오버레이 제거
+    const overlay = document.getElementById('loading-overlay')
+    if (overlay) document.body.removeChild(overlay)
+    
+    alert('추가 문항 생성 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'))
+  }
 }
 
 // 문항 목록 렌더링
