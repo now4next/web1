@@ -9,9 +9,9 @@ AI 기술을 활용한 지능형 역량 진단 및 개발 지원 플랫폼입니
 ## 🌐 데모 URL
 
 - **프로덕션 배포**: https://aiassess.pages.dev
-- **최신 배포**: https://f3452c0d.aiassess.pages.dev ✅ (FOREIGN_KEY_ERROR 수정 완료)
+- **최신 배포**: https://1a1eea2c.aiassess.pages.dev ✅ (깔끔한 DB 구성)
 - **GitHub 레포지토리**: https://github.com/now4next/web1
-- **상태**: 🟢 Live (D1 Database + OpenAI API + 대화 히스토리 + 직무명 검색 + AI 역량 키워드 정규화)
+- **상태**: 🟢 Live (D1 Database + OpenAI API + 4단계 역량 매칭 + 향상된 오류 메시지)
 
 ## ✅ 현재 구현된 기능
 
