@@ -586,6 +586,23 @@ app.post('/api/submit-assessment', async (c) => {
           `).bind(resp.competency).first()
         }
         
+        // 여전히 못 찾으면 공백 완전 제거 후 매칭
+        if (!competency) {
+          const normalizedInput = resp.competency.replace(/\s+/g, '').toLowerCase()
+          const allCompetencies = await db.prepare(`
+            SELECT id, keyword FROM competencies
+          `).all()
+          
+          for (const comp of allCompetencies.results || []) {
+            const normalizedKeyword = comp.keyword.replace(/\s+/g, '').toLowerCase()
+            if (normalizedKeyword === normalizedInput) {
+              competency = comp
+              console.log(`Matched "${resp.competency}" to "${comp.keyword}" (space-insensitive)`)
+              break
+            }
+          }
+        }
+        
         // 여전히 못 찾으면 유사한 키워드 검색
         if (!competency) {
           const similar = await db.prepare(`
