@@ -3,16 +3,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:sandbox": "wrangler pages dev dist --d1=webapp-production --local --ip 0.0.0.0 --port 3000",
+    "dev:sandbox": "wrangler pages dev dist --d1=aiassess-production --local --ip 0.0.0.0 --port 3000",
     "build": "vite build",
     "preview": "wrangler pages dev",
     "deploy": "npm run build && wrangler pages deploy dist --project-name aiassess",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 migrations apply webapp-production --local",
-    "db:migrate:prod": "wrangler d1 migrations apply webapp-production",
-    "db:seed": "wrangler d1 execute webapp-production --local --file=./seed.sql",
+    "db:migrate:local": "wrangler d1 migrations apply aiassess-production --local",
+    "db:migrate:prod": "wrangler d1 migrations apply aiassess-production",
+    "db:seed": "wrangler d1 execute aiassess-production --local --file=./seed.sql",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed",
-    "db:console:local": "wrangler d1 execute webapp-production --local",
+    "db:console:local": "wrangler d1 execute aiassess-production --local",
     "clean-port": "fuser -k 3000/tcp 2>/dev/null || true"
   },
   "dependencies": {
