@@ -61,15 +61,31 @@ app.get('/api/competencies/search', async (c) => {
     
     const query = c.req.query('q') || ''
     
-    const { results } = await db.prepare(`
-      SELECT c.*, cm.name as model_name, cm.type as model_type
-      FROM competencies c
-      JOIN competency_models cm ON c.model_id = cm.id
-      WHERE c.keyword LIKE ? OR c.description LIKE ? OR c.job_name LIKE ?
-      ORDER BY c.created_at DESC
-    `).bind(`%${query}%`, `%${query}%`, `%${query}%`).all()
-    
-    return c.json({ success: true, data: results })
+    // Try with job_name column first (after migration)
+    // Fall back to without job_name if column doesn't exist
+    try {
+      const { results } = await db.prepare(`
+        SELECT c.*, cm.name as model_name, cm.type as model_type
+        FROM competencies c
+        JOIN competency_models cm ON c.model_id = cm.id
+        WHERE c.keyword LIKE ? OR c.description LIKE ? OR c.job_name LIKE ?
+        ORDER BY c.created_at DESC
+      `).bind(`%${query}%`, `%${query}%`, `%${query}%`).all()
+      
+      return c.json({ success: true, data: results })
+    } catch (sqlError) {
+      // Fallback: job_name column doesn't exist yet (before migration)
+      console.log('Fallback to search without job_name column')
+      const { results } = await db.prepare(`
+        SELECT c.*, cm.name as model_name, cm.type as model_type
+        FROM competencies c
+        JOIN competency_models cm ON c.model_id = cm.id
+        WHERE c.keyword LIKE ? OR c.description LIKE ?
+        ORDER BY c.created_at DESC
+      `).bind(`%${query}%`, `%${query}%`).all()
+      
+      return c.json({ success: true, data: results })
+    }
   } catch (error) {
     console.error('Search error:', error)
     return c.json({ 
