@@ -9,9 +9,9 @@ AI 기술을 활용한 지능형 역량 진단 및 개발 지원 플랫폼입니
 ## 🌐 데모 URL
 
 - **프로덕션 배포**: https://aiassess.pages.dev
-- **최신 배포**: https://91bedc45.aiassess.pages.dev ⚠️ (DB 마이그레이션 대기중)
+- **최신 배포**: https://f3452c0d.aiassess.pages.dev ✅ (FOREIGN_KEY_ERROR 수정 완료)
 - **GitHub 레포지토리**: https://github.com/now4next/web1
-- **상태**: 🟢 Live (D1 Database + OpenAI API + 대화 히스토리 + 직무명 검색)
+- **상태**: 🟢 Live (D1 Database + OpenAI API + 대화 히스토리 + 직무명 검색 + AI 역량 키워드 정규화)
 
 ## ✅ 현재 구현된 기능
 
@@ -372,11 +372,20 @@ This project is for demonstration purposes.
 ---
 
 **마지막 업데이트**: 2025-11-04  
-**현재 버전**: 0.5.2 (직무명 검색 기능)  
+**현재 버전**: 0.5.3 (FOREIGN_KEY_ERROR 수정 완료)  
 **개발 상태**: ✅ Active Development  
-**배포 상태**: 🚀 Deployed on Cloudflare Pages (DB Migration Pending)
+**배포 상태**: 🚀 Deployed on Cloudflare Pages
 
-### 최신 업데이트 (v0.5.2) ⭐
+### 최신 업데이트 (v0.5.3) 🎯
+- ✅ **FOREIGN_KEY_ERROR 근본 원인 해결**
+  - AI가 생성한 역량 키워드를 DB 키워드와 강제 일치
+  - OpenAI 프롬프트 개선 - 정확한 키워드 사용 명령 추가
+  - Backend 역량명 정규화 로직 추가 (case-insensitive + trim)
+  - 진단 제출 실패 문제 완전 해결
+  - 이중 안전장치로 데이터 일관성 보장
+  - 📄 상세 문서: `FIX_SUMMARY.md`
+
+### 이전 업데이트 (v0.5.2) ⭐
 - ✅ **직무명(job_name) 검색 기능 추가**
   - `competencies` 테이블에 `job_name` 컬럼 추가
   - 검색 API 업데이트 - 역량명, 역량정의, 직무명 통합 검색
