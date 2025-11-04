@@ -540,17 +540,35 @@ app.post('/api/submit-assessment', async (c) => {
       let questionId = resp.question_id
       
       if (!questionId) {
-        // 역량으로 competency_id 찾기
-        const competency = await db.prepare(`
+        // 역량으로 competency_id 찾기 (정확한 매칭)
+        let competency = await db.prepare(`
           SELECT id FROM competencies WHERE keyword = ?
         `).bind(resp.competency).first()
         
+        // 찾지 못하면 대소문자 무시하고 재시도
         if (!competency) {
-          console.error(`Competency not found: ${resp.competency}`)
+          competency = await db.prepare(`
+            SELECT id FROM competencies 
+            WHERE LOWER(TRIM(keyword)) = LOWER(TRIM(?))
+          `).bind(resp.competency).first()
+        }
+        
+        // 여전히 못 찾으면 유사한 키워드 검색
+        if (!competency) {
+          const similar = await db.prepare(`
+            SELECT id, keyword FROM competencies 
+            WHERE keyword LIKE ?
+            LIMIT 5
+          `).bind(`%${resp.competency}%`).all()
+          
+          console.error(`Competency not found: "${resp.competency}"`)
+          console.error(`Similar competencies:`, similar.results?.map((c: any) => c.keyword))
+          
           return c.json({ 
             success: false, 
             error: `역량을 찾을 수 없습니다: ${resp.competency}`,
-            message: '선택한 역량이 데이터베이스에 존재하지 않습니다. 역량 목록을 다시 확인해주세요.'
+            message: '선택한 역량이 데이터베이스에 존재하지 않습니다. 역량 목록을 다시 확인해주세요.',
+            similar_keywords: similar.results?.map((c: any) => c.keyword) || []
           }, 400)
         }
         
