@@ -9,14 +9,16 @@ AI 기술을 활용한 지능형 역량 진단 및 개발 지원 플랫폼입니
 ## 🌐 데모 URL
 
 - **프로덕션 배포**: https://aiassess.pages.dev
-- **최신 배포**: https://271196f7.aiassess.pages.dev
+- **최신 배포**: https://91bedc45.aiassess.pages.dev ⚠️ (DB 마이그레이션 대기중)
 - **GitHub 레포지토리**: https://github.com/now4next/web1
-- **상태**: 🟢 Live (D1 Database + OpenAI API + 대화 히스토리)
+- **상태**: 🟢 Live (D1 Database + OpenAI API + 대화 히스토리 + 직무명 검색)
 
 ## ✅ 현재 구현된 기능
 
 ### Phase 1: ASSESS (진단 설계 및 실행) ✅
 - ✅ **역량 키워드 검색 및 선택**: 조직의 역량 모델에서 키워드 검색
+  - **NEW v0.5.2!** 직무명(job_name) 검색 지원 - "영업", "마케팅", "인사" 등으로 검색 가능
+  - 역량명, 역량정의, 직무명에서 포괄 검색
 - ✅ **AI 문항 자동 생성 및 관리**: OpenAI GPT-4o-mini를 활용한 진단 문항 생성 (데모 모드 지원)
   - 행동 지표 (Behavioral Indicators) 자동 생성
   - 역량별 진단 문항 자동 생성
@@ -146,7 +148,7 @@ npm run dev:sandbox
 ### 역량 관리
 - `GET /api/competency-models` - 역량 모델 목록
 - `POST /api/competency-models` - 역량 모델 생성
-- `GET /api/competencies/search?q={keyword}` - 역량 검색
+- `GET /api/competencies/search?q={keyword}` - 역량 검색 (역량명, 역량정의, 직무명 검색)
 - `GET /api/competencies/:modelId` - 특정 모델의 역량 목록
 - `POST /api/competencies` - 역량 추가
 
@@ -216,8 +218,9 @@ npm run dev:sandbox
 ## 📝 사용 가이드
 
 ### 1. 역량 키워드 선택
-- "진단 설계" 탭에서 역량 키워드를 검색합니다
-- 예: "커뮤니케이션", "리더십", "전략적사고"
+- "진단 설계" 탭에서 역량 키워드 또는 직무명을 검색합니다
+- **역량명 검색**: "커뮤니케이션", "리더십", "전략적사고"
+- **직무명 검색 (NEW v0.5.2!)**: "영업", "마케팅", "인사", "재무" 등
 - 검색 결과에서 필요한 역량을 선택합니다
 
 ### 2. AI 문항 생성
@@ -368,12 +371,23 @@ This project is for demonstration purposes.
 
 ---
 
-**마지막 업데이트**: 2025-11-01  
-**현재 버전**: 0.5.1 (진단 설정 UI 개선)  
+**마지막 업데이트**: 2025-11-04  
+**현재 버전**: 0.5.2 (직무명 검색 기능)  
 **개발 상태**: ✅ Active Development  
-**배포 상태**: 🚀 Deployed on Cloudflare Pages
+**배포 상태**: 🚀 Deployed on Cloudflare Pages (DB Migration Pending)
 
-### 최신 업데이트 (v0.5.1)
+### 최신 업데이트 (v0.5.2) ⭐
+- ✅ **직무명(job_name) 검색 기능 추가**
+  - `competencies` 테이블에 `job_name` 컬럼 추가
+  - 검색 API 업데이트 - 역량명, 역량정의, 직무명 통합 검색
+  - 15개 직무 카테고리 지원 (영업, 마케팅, 인사, 재무, 법무, 정보기술 등)
+  - 직무명으로 관련 역량 일괄 검색 가능
+  - 예: "영업" 검색 → 관계형성, 서비스 지향, 성과지향
+  - 검색 성능 최적화 (인덱스 추가)
+  - ⚠️ **프로덕션 DB 마이그레이션 대기**: Cloudflare D1 Console에서 수동 적용 필요
+  - 📄 마이그레이션 가이드: `PRODUCTION_MIGRATION_GUIDE.md`
+
+### 이전 업데이트 (v0.5.1)
 - ✅ **진단 문항 디스플레이 설정 UI 개선**
   - 드롭다운에서 버튼 박스 방식으로 변경
   - 1개~10개, 전체 선택 버튼 11개 제공
