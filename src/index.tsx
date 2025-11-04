@@ -611,14 +611,26 @@ app.post('/api/submit-assessment', async (c) => {
             LIMIT 5
           `).bind(`%${resp.competency}%`).all()
           
-          console.error(`Competency not found: "${resp.competency}"`)
-          console.error(`Similar competencies:`, similar.results?.map((c: any) => c.keyword))
+          console.error(`❌ Competency NOT FOUND: "${resp.competency}"`)
+          console.error(`📊 Similar competencies in DB:`, similar.results?.map((c: any) => c.keyword))
+          console.error(`📋 Full response data:`, {
+            competency: resp.competency,
+            question_text: resp.question_text,
+            competency_length: resp.competency.length,
+            competency_charCodes: Array.from(resp.competency).map(c => c.charCodeAt(0))
+          })
           
           return c.json({ 
             success: false, 
-            error: `역량을 찾을 수 없습니다: ${resp.competency}`,
-            message: '선택한 역량이 데이터베이스에 존재하지 않습니다. 역량 목록을 다시 확인해주세요.',
-            similar_keywords: similar.results?.map((c: any) => c.keyword) || []
+            error: `COMPETENCY_NOT_FOUND`,
+            competency: resp.competency,
+            message: `❌ 역량을 찾을 수 없습니다: "${resp.competency}"\n\n이 역량이 데이터베이스에 존재하지 않습니다.\n\n유사한 역량:\n${similar.results?.map((c: any) => `- ${c.keyword}`).join('\n') || '없음'}\n\n💡 해결방법:\n1. 브라우저 Console(F12)을 열어주세요\n2. 다음 명령어를 실행하세요:\n   console.log(assessmentQuestions.map(q => q.competency))\n3. 결과를 개발자에게 전달해주세요`,
+            similar_keywords: similar.results?.map((c: any) => c.keyword) || [],
+            debug: {
+              competency_length: resp.competency.length,
+              has_whitespace: /\s/.test(resp.competency),
+              normalized: resp.competency.replace(/\s+/g, '').toLowerCase()
+            }
           }, 400)
         }
         
