@@ -65,9 +65,9 @@ app.get('/api/competencies/search', async (c) => {
       SELECT c.*, cm.name as model_name, cm.type as model_type
       FROM competencies c
       JOIN competency_models cm ON c.model_id = cm.id
-      WHERE c.keyword LIKE ? OR c.description LIKE ?
+      WHERE c.keyword LIKE ? OR c.description LIKE ? OR c.job_name LIKE ?
       ORDER BY c.created_at DESC
-    `).bind(`%${query}%`, `%${query}%`).all()
+    `).bind(`%${query}%`, `%${query}%`, `%${query}%`).all()
     
     return c.json({ success: true, data: results })
   } catch (error) {
