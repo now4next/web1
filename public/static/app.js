@@ -2204,11 +2204,16 @@ async function submitAssessment() {
   if (!confirm('진단을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.')) return
   
   try {
+    // 디버깅: 제출할 역량 키워드 확인
+    const competenciesToSubmit = assessmentQuestions.map(q => q.competency)
+    console.log('=== 진단 제출 디버깅 ===')
     console.log('Submitting assessment...', {
       respondent: currentRespondentInfo,
       question_count: assessmentQuestions.length,
-      response_count: assessmentResponses.filter(r => r !== null).length
+      response_count: assessmentResponses.filter(r => r !== null).length,
+      competencies: competenciesToSubmit
     })
+    console.log('첫 3개 문항 상세:', assessmentQuestions.slice(0, 3))
     
     const response = await fetch('/api/submit-assessment', {
       method: 'POST',
@@ -2247,11 +2252,18 @@ async function submitAssessment() {
         }, 500)
       }
     } else {
+      // 오류 상세 정보 출력
+      console.error('=== 제출 실패 상세 ===')
+      console.error('오류 타입:', result.error)
+      console.error('오류 메시지:', result.message)
+      if (result.similar_keywords) {
+        console.error('유사 키워드:', result.similar_keywords)
+      }
       throw new Error(result.error || '제출 실패')
     }
   } catch (error) {
     console.error('제출 오류:', error)
-    alert('제출 중 오류가 발생했습니다: ' + error.message)
+    alert('제출 중 오류가 발생했습니다: ' + error.message + '\n\n브라우저 Console(F12)을 열어 상세 정보를 확인하세요.')
   }
 }
 
