@@ -257,6 +257,9 @@ app.post('/api/ai/generate-questions', async (c) => {
 대상 직급: ${body.target_level}
 진단 유형: ${body.question_type}
 
+⚠️ 중요: "competency" 필드에는 반드시 위의 역량 키워드를 정확히 그대로 사용하세요. 절대 변형하지 마세요.
+예시: "리더십" → "리더십" (O), "전략적 리더십" (X), "Leadership" (X)
+
 각 역량마다 다음을 생성해주세요:
 1. 행동 지표 (Behavioral Indicators) 3개
 2. 진단 문항 5개
@@ -265,13 +268,13 @@ app.post('/api/ai/generate-questions', async (c) => {
 {
   "behavioral_indicators": [
     {
-      "competency": "역량명",
+      "competency": "역량명 (입력된 키워드 그대로)",
       "indicators": ["지표1", "지표2", "지표3"]
     }
   ],
   "questions": [
     {
-      "competency": "역량명",
+      "competency": "역량명 (입력된 키워드 그대로)",
       "question_text": "문항 내용",
       "question_type": "${body.question_type}"
     }
@@ -304,6 +307,36 @@ app.post('/api/ai/generate-questions', async (c) => {
     
     const data = await response.json() as any
     const content = JSON.parse(data.choices[0].message.content)
+    
+    // 🔧 AI가 생성한 역량명을 입력된 키워드로 강제 정규화
+    const keywordMap = new Map()
+    for (const keyword of body.competency_keywords) {
+      keywordMap.set(keyword.toLowerCase().trim(), keyword)
+    }
+    
+    // Behavioral indicators 정규화
+    if (content.behavioral_indicators) {
+      for (const item of content.behavioral_indicators) {
+        const normalized = keywordMap.get(item.competency.toLowerCase().trim())
+        if (normalized) {
+          item.competency = normalized
+        } else {
+          console.warn(`AI generated unknown competency: ${item.competency}`)
+        }
+      }
+    }
+    
+    // Questions 정규화
+    if (content.questions) {
+      for (const question of content.questions) {
+        const normalized = keywordMap.get(question.competency.toLowerCase().trim())
+        if (normalized) {
+          question.competency = normalized
+        } else {
+          console.warn(`AI generated unknown competency: ${question.competency}`)
+        }
+      }
+    }
     
     // DB에 저장 (있으면)
     if (db) {
