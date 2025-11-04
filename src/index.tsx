@@ -545,23 +545,30 @@ app.post('/api/submit-assessment', async (c) => {
           SELECT id FROM competencies WHERE keyword = ?
         `).bind(resp.competency).first()
         
-        if (competency) {
-          // 문항이 이미 있는지 확인
-          const existingQuestion = await db.prepare(`
-            SELECT id FROM assessment_questions 
-            WHERE competency_id = ? AND question_text = ?
-          `).bind(competency.id, resp.question_text).first()
-          
-          if (existingQuestion) {
-            questionId = existingQuestion.id
-          } else {
-            // 새 문항 생성
-            const questionResult = await db.prepare(`
-              INSERT INTO assessment_questions (competency_id, question_text, question_type)
-              VALUES (?, ?, 'self')
-            `).bind(competency.id, resp.question_text).run()
-            questionId = questionResult.meta.last_row_id
-          }
+        if (!competency) {
+          console.error(`Competency not found: ${resp.competency}`)
+          return c.json({ 
+            success: false, 
+            error: `역량을 찾을 수 없습니다: ${resp.competency}`,
+            message: '선택한 역량이 데이터베이스에 존재하지 않습니다. 역량 목록을 다시 확인해주세요.'
+          }, 400)
+        }
+        
+        // 문항이 이미 있는지 확인
+        const existingQuestion = await db.prepare(`
+          SELECT id FROM assessment_questions 
+          WHERE competency_id = ? AND question_text = ?
+        `).bind(competency.id, resp.question_text).first()
+        
+        if (existingQuestion) {
+          questionId = existingQuestion.id
+        } else {
+          // 새 문항 생성
+          const questionResult = await db.prepare(`
+            INSERT INTO assessment_questions (competency_id, question_text, question_type)
+            VALUES (?, ?, 'self')
+          `).bind(competency.id, resp.question_text).run()
+          questionId = questionResult.meta.last_row_id
         }
       }
       
@@ -589,9 +596,21 @@ app.post('/api/submit-assessment', async (c) => {
     })
   } catch (error: any) {
     console.error('Submit assessment error:', error)
+    
+    // 외래키 제약 조건 오류 감지
+    if (error.message && error.message.includes('FOREIGN KEY constraint failed')) {
+      return c.json({ 
+        success: false, 
+        error: 'FOREIGN_KEY_ERROR',
+        message: '선택한 역량이 데이터베이스에 존재하지 않습니다. 역량 목록을 새로고침해주세요.',
+        detail: error.message
+      }, 400)
+    }
+    
     return c.json({ 
       success: false, 
-      error: error.message 
+      error: error.message || 'Unknown error',
+      message: '진단 제출 중 오류가 발생했습니다.'
     }, 500)
   }
 })
