@@ -761,7 +761,7 @@ app.post('/api/submit-assessment', async (c) => {
           respondentInfo.name || '익명',
           respondentInfo.email,
           respondentInfo.department || '',
-          respondentInfo.position || ''
+          respondentInfo.level || respondentInfo.position || ''  // level 우선, 없으면 position 사용
         ).run()
         respondentId = respondentResult.meta.last_row_id
       }

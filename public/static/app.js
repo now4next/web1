@@ -1136,7 +1136,7 @@ async function loadRespondents() {
              onclick="loadAnalysis(${resp.id})">
           <div>
             <div class="font-medium text-gray-800">${resp.name}</div>
-            <div class="text-sm text-gray-500">${resp.email} · ${resp.department || '부서 미지정'} · ${resp.position || '직책 미지정'}</div>
+            <div class="text-sm text-gray-500">${resp.email} · ${resp.department || '부서 미지정'} · ${resp.position || '직급 미지정'}</div>
           </div>
           <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
             <i class="fas fa-chart-line mr-1"></i>결과 보기
@@ -1245,7 +1245,7 @@ function renderAnalysisReport(data) {
       <div class="flex justify-between items-start">
         <div>
           <h3 class="text-2xl font-bold mb-2">역량 진단 결과 리포트</h3>
-          <p class="text-blue-100">${respondent.name} · ${respondent.position || '직책 미지정'}</p>
+          <p class="text-blue-100">${respondent.name} · ${respondent.position || '직급 미지정'}</p>
           <p class="text-sm text-blue-200">${respondent.email}</p>
         </div>
         <button onclick="document.getElementById('analysis-report').classList.add('hidden'); currentAnalysisData = null;" 
