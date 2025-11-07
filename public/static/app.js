@@ -2561,12 +2561,22 @@ function updateNavigationButtons() {
   }
 }
 
+// 문항 컨테이너로 스크롤
+function scrollToQuestionsContainer() {
+  const container = document.getElementById('questions-container')
+  if (container) {
+    // 컨테이너 위치에서 약간 위쪽으로 오프셋 (헤더 고려)
+    const containerTop = container.getBoundingClientRect().top + window.pageYOffset - 100
+    window.scrollTo({ top: containerTop, behavior: 'smooth' })
+  }
+}
+
 // 이전 페이지
 function previousPage() {
   if (currentPage > 0) {
     currentPage--
     renderQuestionsPage()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollToQuestionsContainer()
   }
 }
 
@@ -2576,7 +2586,7 @@ function nextPage() {
   if (currentPage < totalPages - 1) {
     currentPage++
     renderQuestionsPage()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollToQuestionsContainer()
   }
 }
 
@@ -2605,6 +2615,8 @@ if (typeof selectAnswer !== 'undefined') window.selectAnswer = selectAnswer
 if (typeof submitAssessment !== 'undefined') window.submitAssessment = submitAssessment
 if (typeof startAssessment !== 'undefined') window.startAssessment = startAssessment
 if (typeof renderQuestionsPage !== 'undefined') window.renderQuestionsPage = renderQuestionsPage
+if (typeof scrollToQuestionsContainer !== 'undefined') window.scrollToQuestionsContainer = scrollToQuestionsContainer
+if (typeof previousPage !== 'undefined') window.previousPage = previousPage
 if (typeof prevPage !== 'undefined') window.prevPage = prevPage
 if (typeof nextPage !== 'undefined') window.nextPage = nextPage
 if (typeof submitResponses !== 'undefined') window.submitResponses = submitResponses
