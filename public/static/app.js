@@ -365,9 +365,14 @@ function renderGeneratedQuestions(data, isDemo = false) {
     </div>
     
     <div class="mt-6">
-      <button onclick="showSaveDialog()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-        <i class="fas fa-save mr-2"></i>진단 저장
-      </button>
+      <div class="grid grid-cols-2 gap-4">
+        <button onclick="generateAdditionalQuestions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center">
+          <i class="fas fa-magic mr-2"></i>문항 추가 AI 생성
+        </button>
+        <button onclick="showSaveDialog()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center">
+          <i class="fas fa-save mr-2"></i>진단 저장
+        </button>
+      </div>
       <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <p class="text-sm text-blue-800">
           <i class="fas fa-info-circle mr-2"></i>
@@ -402,10 +407,16 @@ async function generateAdditionalQuestions() {
     loadingOverlay.id = 'loading-overlay'
     loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
     loadingOverlay.innerHTML = `
-      <div class="bg-white rounded-lg p-8 max-w-md">
-        <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600">추가 문항을 생성하고 있습니다...</p>
-        <p class="text-sm text-gray-500 mt-2">최대 1분 정도 소요될 수 있습니다</p>
+      <div class="bg-white rounded-lg p-8 max-w-md text-center shadow-2xl">
+        <div class="inline-block animate-pulse mb-6">
+          <i class="fas fa-magic text-6xl text-blue-600"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-3">AI 문항 추가 생성 중...</h3>
+        <p class="text-gray-600 mb-4">선택하신 역량에 대한 추가 문항을 AI가 생성하고 있습니다.</p>
+        <div class="flex items-center justify-center space-x-2 text-sm text-gray-500">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>잠시만 기다려주세요 (약 10-20초 소요)</span>
+        </div>
       </div>
     `
     document.body.appendChild(loadingOverlay)
