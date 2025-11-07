@@ -1740,7 +1740,7 @@ window.showTab = function(tabName) {
 // 전역 변수
 let assessmentQuestions = []
 let currentPage = 0
-let questionsPerPage = null  // 사용자가 선택해야 함
+let questionsPerPage = undefined  // 사용자가 선택해야 함
 let assessmentResponses = []
 let currentRespondentInfo = null
 let scaleConfig = {
