@@ -974,6 +974,71 @@ app.get('/api/respondents', async (c) => {
   return c.json({ success: true, data: results })
 })
 
+// 로그인한 사용자의 진단 결과 목록 (인증 필요)
+app.get('/api/my-assessments', async (c) => {
+  const db = c.env.DB
+  const authHeader = c.req.header('Authorization')
+  
+  if (!authHeader) {
+    return c.json({ success: false, error: '인증이 필요합니다' }, 401)
+  }
+  
+  const sessionToken = authHeader.replace('Bearer ', '')
+  
+  // 세션 확인
+  const session = await db.prepare(`
+    SELECT user_id FROM user_sessions 
+    WHERE session_token = ? AND datetime(expires_at) > datetime('now')
+  `).bind(sessionToken).first()
+  
+  if (!session) {
+    return c.json({ success: false, error: '유효하지 않은 세션입니다' }, 401)
+  }
+  
+  // 사용자 정보
+  const user = await db.prepare(`
+    SELECT * FROM users WHERE id = ?
+  `).bind(session.user_id).first()
+  
+  if (!user) {
+    return c.json({ success: false, error: '사용자를 찾을 수 없습니다' }, 404)
+  }
+  
+  // 해당 사용자의 진단 세션 목록 (이메일 기반)
+  const { results: assessments } = await db.prepare(`
+    SELECT 
+      ase.id as session_id,
+      ase.session_name,
+      ase.session_type,
+      ase.target_level,
+      ase.status,
+      ase.start_date,
+      ase.created_at,
+      r.id as respondent_id,
+      r.name as respondent_name,
+      r.email,
+      r.department,
+      r.position,
+      COUNT(DISTINCT ar.id) as response_count,
+      COUNT(DISTINCT ar.question_id) as question_count
+    FROM assessment_sessions ase
+    LEFT JOIN assessment_responses ar ON ase.id = ar.session_id
+    LEFT JOIN respondents r ON ar.respondent_id = r.id
+    WHERE r.email = ?
+    GROUP BY ase.id
+    ORDER BY ase.created_at DESC
+  `).bind(user.email).all()
+  
+  return c.json({ 
+    success: true, 
+    data: assessments,
+    user: {
+      name: user.name,
+      email: user.email
+    }
+  })
+})
+
 // 응답자별 결과 분석
 app.get('/api/analysis/:respondentId', async (c) => {
   const db = c.env.DB
@@ -1670,23 +1735,40 @@ app.get('/', (c) => {
 
             <!-- ANALYTICS Tab -->
             <div id="tab-analytics" class="tab-content hidden">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
-                        <i class="fas fa-chart-bar text-green-600 mr-2"></i>
-                        결과 분석
-                    </h2>
-                    
-                    <!-- 응답자 목록 -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3">응답자 목록</h3>
-                        <div id="respondents-list" class="space-y-2">
-                            <p class="text-gray-400 text-sm">로딩 중...</p>
+                <!-- 인트로 섹션 -->
+                <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-8 mb-6">
+                    <div class="max-w-3xl mx-auto text-center">
+                        <div class="inline-block p-4 bg-white rounded-full shadow-md mb-4">
+                            <i class="fas fa-chart-line text-green-600 text-4xl"></i>
                         </div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-3">나의 역량 진단 결과</h2>
+                        <p class="text-gray-600 text-lg">
+                            진행한 역량 진단의 결과를 확인하고 분석할 수 있습니다
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- 진단 결과 목록 -->
+                <div class="bg-white rounded-lg shadow-sm">
+                    <div class="border-b border-gray-200 px-6 py-4">
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-clipboard-list text-green-600 mr-2"></i>
+                            나의 진단 목록
+                            <span id="my-assessments-count" class="ml-3 px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">0</span>
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">내가 참여한 역량 진단 결과를 확인하세요</p>
                     </div>
                     
-                    <!-- 결과 리포트 영역 -->
-                    <div id="analysis-report" class="hidden"></div>
+                    <div id="my-assessments-list" class="p-6">
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-500">진단 결과를 불러오는 중...</p>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- 결과 리포트 영역 (초기 숨김) -->
+                <div id="analysis-report" class="hidden mt-6"></div>
             </div>
 
             <!-- ACTION Tab -->

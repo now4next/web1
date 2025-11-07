@@ -1129,7 +1129,121 @@ document.addEventListener('DOMContentLoaded', () => {
 // Phase 2: 분석 및 인사이트
 // ============================================================================
 
-// 응답자 목록 로드
+// 나의 진단 목록 로드 (로그인 필요)
+async function loadMyAssessments() {
+  const sessionToken = localStorage.getItem('sessionToken')
+  const listDiv = document.getElementById('my-assessments-list')
+  const countBadge = document.getElementById('my-assessments-count')
+  
+  if (!sessionToken) {
+    listDiv.innerHTML = `
+      <div class="text-center py-12">
+        <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+        <p class="text-gray-600 mb-4">로그인이 필요한 서비스입니다</p>
+        <button onclick="showLoginModal()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fas fa-sign-in-alt mr-2"></i>로그인
+        </button>
+      </div>
+    `
+    countBadge.textContent = '0'
+    return
+  }
+  
+  try {
+    const response = await axios.get('/api/my-assessments', {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    })
+    
+    console.log('📊 My assessments:', response.data)
+    
+    if (response.data.success && response.data.data.length > 0) {
+      const assessments = response.data.data
+      countBadge.textContent = assessments.length
+      
+      listDiv.innerHTML = assessments.map(assessment => {
+        const date = new Date(assessment.created_at)
+        const dateStr = date.toLocaleDateString('ko-KR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })
+        const timeStr = date.toLocaleTimeString('ko-KR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+        
+        // 진단 유형 한글 변환
+        const typeMap = {
+          'self': '자가진단',
+          'multi': '다면평가',
+          'org': '조직진단'
+        }
+        const typeLabel = typeMap[assessment.session_type] || assessment.session_type
+        const typeColor = {
+          'self': 'bg-blue-100 text-blue-700',
+          'multi': 'bg-purple-100 text-purple-700',
+          'org': 'bg-green-100 text-green-700'
+        }
+        const typeColorClass = typeColor[assessment.session_type] || 'bg-gray-100 text-gray-700'
+        
+        return `
+          <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
+               onclick="loadAnalysis(${assessment.respondent_id})">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800 text-lg mb-2">${assessment.session_name || '역량 진단'}</h4>
+                <div class="flex flex-wrap gap-2 mb-2">
+                  <span class="${typeColorClass} px-3 py-1 rounded-full text-xs font-medium">
+                    <i class="fas fa-clipboard-check mr-1"></i>${typeLabel}
+                  </span>
+                  ${assessment.target_level ? `
+                    <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
+                      <i class="fas fa-user mr-1"></i>${assessment.target_level}
+                    </span>
+                  ` : ''}
+                  <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                    <i class="fas fa-check-circle mr-1"></i>${assessment.status === 'completed' ? '완료' : '진행중'}
+                  </span>
+                </div>
+                <div class="text-sm text-gray-500 space-y-1">
+                  <div><i class="fas fa-calendar mr-2 text-gray-400"></i>${dateStr} ${timeStr}</div>
+                  <div><i class="fas fa-tasks mr-2 text-gray-400"></i>응답 문항: ${assessment.response_count || 0}개</div>
+                </div>
+              </div>
+              <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-chart-line mr-2"></i>결과 보기
+              </button>
+            </div>
+          </div>
+        `
+      }).join('')
+    } else {
+      listDiv.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
+          <p class="text-gray-600 text-lg mb-2">아직 진단 결과가 없습니다</p>
+          <p class="text-sm text-gray-500 mb-6">진단 설계 탭에서 역량 진단을 시작하세요</p>
+          <button onclick="showTab('assess', document.querySelector('.nav-btn'))" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <i class="fas fa-clipboard-list mr-2"></i>진단 시작하기
+          </button>
+        </div>
+      `
+      countBadge.textContent = '0'
+    }
+  } catch (error) {
+    console.error('❌ Error loading my assessments:', error)
+    listDiv.innerHTML = `
+      <div class="text-center py-8">
+        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+        <p class="text-red-600">진단 목록을 불러오는 중 오류가 발생했습니다</p>
+        <p class="text-sm text-gray-500 mt-2">${error.response?.data?.error || error.message}</p>
+      </div>
+    `
+    countBadge.textContent = '0'
+  }
+}
+
+// 응답자 목록 로드 (관리자용 - 사용 안 함)
 async function loadRespondents() {
   try {
     const response = await axios.get('/api/respondents')
@@ -1734,7 +1848,8 @@ const originalShowTab = showTab
 window.showTab = function(tabName) {
   originalShowTab.call(this, tabName)
   if (tabName === 'analytics') {
-    loadRespondents()
+    scrollToNavigation()
+    loadMyAssessments()
   }
 }
 
@@ -2662,6 +2777,8 @@ if (typeof sendChatMessage !== 'undefined') window.sendChatMessage = sendChatMes
 if (typeof generateAIInsights !== 'undefined') window.generateAIInsights = generateAIInsights
 if (typeof selectAssistant !== 'undefined') window.selectAssistant = selectAssistant
 if (typeof resetAssistant !== 'undefined') window.resetAssistant = resetAssistant
+if (typeof loadMyAssessments !== 'undefined') window.loadMyAssessments = loadMyAssessments
 
 console.log('=== All functions bound to window object ===')
 console.log('searchCompetencies available:', typeof window.searchCompetencies === 'function')
+console.log('loadMyAssessments available:', typeof window.loadMyAssessments === 'function')
