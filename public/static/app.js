@@ -1323,6 +1323,14 @@ async function loadAnalysis(respondentId) {
         renderAnalysisReport(response.data.data)
         console.log('✅ Analysis report rendered successfully')
         
+        // 분석 리포트로 자동 스크롤 (결과 보기 버튼 클릭 후)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            reportDiv.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            console.log('✅ Scrolled to analysis report')
+          })
+        })
+        
         // AI 인사이트는 버튼 클릭 시 생성 (자동 호출 제거)
       } catch (renderError) {
         console.error('❌ Error rendering analysis report:', renderError)
