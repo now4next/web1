@@ -1896,6 +1896,17 @@ window.showTab = function(tabName) {
       })
     })
     loadMyAssessments()
+  } else if (tabName === 'action') {
+    // 실행 지원 탭으로 직접 스크롤 (Hero 섹션 건너뛰기)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const actionTab = document.getElementById('tab-action')
+        if (actionTab) {
+          actionTab.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          console.log('✅ Scrolled to action tab')
+        }
+      })
+    })
   }
 }
 
