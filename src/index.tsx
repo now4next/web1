@@ -151,7 +151,7 @@ app.post('/api/ai/get-saved-questions', async (c) => {
     for (const keyword of body.competency_keywords) {
       // 역량 ID 조회
       const { results: compResults } = await db.prepare(`
-        SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+        SELECT id FROM competencies WHERE name = ? LIMIT 1
       `).bind(keyword).all()
       
       if (compResults && compResults.length > 0) {
@@ -342,7 +342,7 @@ app.post('/api/ai/generate-questions', async (c) => {
         for (const behavioralItem of content.behavioral_indicators || []) {
           // 역량 ID 조회
           const { results: compResults } = await db.prepare(`
-            SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+            SELECT id FROM competencies WHERE name = ? LIMIT 1
           `).bind(behavioralItem.competency).all()
           
           if (compResults && compResults.length > 0) {
@@ -367,7 +367,7 @@ app.post('/api/ai/generate-questions', async (c) => {
         for (const question of content.questions || []) {
           // 역량 ID 조회
           const { results: compResults } = await db.prepare(`
-            SELECT id FROM competencies WHERE keyword = ? LIMIT 1
+            SELECT id FROM competencies WHERE name = ? LIMIT 1
           `).bind(question.competency).all()
           
           if (compResults && compResults.length > 0) {
@@ -664,7 +664,7 @@ app.post('/api/assessment-questions-save', async (c) => {
   
   // 역량 키워드로 competency_id 찾기
   const competency = await db.prepare(`
-    SELECT id FROM competencies WHERE keyword = ?
+    SELECT id FROM competencies WHERE name = ?
   `).bind(body.competency_keyword).first()
   
   if (!competency) {
@@ -698,7 +698,7 @@ app.post('/api/assessment-responses', async (c) => {
     } else {
       // 역량으로 competency_id 찾기
       const competency = await db.prepare(`
-        SELECT id FROM competencies WHERE keyword = ?
+        SELECT id FROM competencies WHERE name = ?
       `).bind(body.competency).first()
       
       if (competency) {
@@ -778,14 +778,14 @@ app.post('/api/submit-assessment', async (c) => {
       if (!questionId) {
         // 역량으로 competency_id 찾기 (정확한 매칭)
         let competency = await db.prepare(`
-          SELECT id FROM competencies WHERE keyword = ?
+          SELECT id FROM competencies WHERE name = ?
         `).bind(resp.competency).first()
         
         // 찾지 못하면 대소문자 무시하고 재시도
         if (!competency) {
           competency = await db.prepare(`
             SELECT id FROM competencies 
-            WHERE LOWER(TRIM(keyword)) = LOWER(TRIM(?))
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
           `).bind(resp.competency).first()
         }
         
@@ -793,14 +793,14 @@ app.post('/api/submit-assessment', async (c) => {
         if (!competency) {
           const normalizedInput = resp.competency.replace(/\s+/g, '').toLowerCase()
           const allCompetencies = await db.prepare(`
-            SELECT id, keyword FROM competencies
+            SELECT id, name FROM competencies
           `).all()
           
           for (const comp of allCompetencies.results || []) {
-            const normalizedKeyword = comp.keyword.replace(/\s+/g, '').toLowerCase()
-            if (normalizedKeyword === normalizedInput) {
+            const normalizedName = comp.name.replace(/\s+/g, '').toLowerCase()
+            if (normalizedName === normalizedInput) {
               competency = comp
-              console.log(`Matched "${resp.competency}" to "${comp.keyword}" (space-insensitive)`)
+              console.log(`Matched "${resp.competency}" to "${comp.name}" (space-insensitive)`)
               break
             }
           }
@@ -809,13 +809,13 @@ app.post('/api/submit-assessment', async (c) => {
         // 여전히 못 찾으면 유사한 키워드 검색
         if (!competency) {
           const similar = await db.prepare(`
-            SELECT id, keyword FROM competencies 
-            WHERE keyword LIKE ?
+            SELECT id, name FROM competencies 
+            WHERE name LIKE ?
             LIMIT 5
           `).bind(`%${resp.competency}%`).all()
           
           console.error(`❌ Competency NOT FOUND: "${resp.competency}"`)
-          console.error(`📊 Similar competencies in DB:`, similar.results?.map((c: any) => c.keyword))
+          console.error(`📊 Similar competencies in DB:`, similar.results?.map((c: any) => c.name))
           console.error(`📋 Full response data:`, {
             competency: resp.competency,
             question_text: resp.question_text,
@@ -827,8 +827,8 @@ app.post('/api/submit-assessment', async (c) => {
             success: false, 
             error: `COMPETENCY_NOT_FOUND`,
             competency: resp.competency,
-            message: `❌ 역량을 찾을 수 없습니다: "${resp.competency}"\n\n이 역량이 데이터베이스에 존재하지 않습니다.\n\n유사한 역량:\n${similar.results?.map((c: any) => `- ${c.keyword}`).join('\n') || '없음'}\n\n💡 해결방법:\n1. 브라우저 Console(F12)을 열어주세요\n2. 다음 명령어를 실행하세요:\n   console.log(assessmentQuestions.map(q => q.competency))\n3. 결과를 개발자에게 전달해주세요`,
-            similar_keywords: similar.results?.map((c: any) => c.keyword) || [],
+            message: `❌ 역량을 찾을 수 없습니다: "${resp.competency}"\n\n이 역량이 데이터베이스에 존재하지 않습니다.\n\n유사한 역량:\n${similar.results?.map((c: any) => `- ${c.name}`).join('\n') || '없음'}\n\n💡 해결방법:\n1. 브라우저 Console(F12)을 열어주세요\n2. 다음 명령어를 실행하세요:\n   console.log(assessmentQuestions.map(q => q.competency))\n3. 결과를 개발자에게 전달해주세요`,
+            similar_keywords: similar.results?.map((c: any) => c.name) || [],
             debug: {
               competency_length: resp.competency.length,
               has_whitespace: /\s/.test(resp.competency),
