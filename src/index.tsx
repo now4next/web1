@@ -645,13 +645,13 @@ app.get('/api/assessment-questions', async (c) => {
       aq.question_text,
       aq.question_type,
       aq.scale_type,
-      c.keyword as competency,
-      c.description as competency_description,
+      c.name as competency,
+      c.definition as competency_description,
       cm.name as model_name
     FROM assessment_questions aq
     JOIN competencies c ON aq.competency_id = c.id
     JOIN competency_models cm ON c.model_id = cm.id
-    ORDER BY cm.name, c.keyword, aq.id
+    ORDER BY cm.name, c.name, aq.id
   `).all()
   
   return c.json({ success: true, data: results, count: results.length })
@@ -994,13 +994,13 @@ app.get('/api/analysis/:respondentId', async (c) => {
       ar.response_value,
       aq.question_text,
       aq.question_type,
-      c.keyword as competency,
-      c.description as competency_description
+      c.name as competency,
+      c.definition as competency_description
     FROM assessment_responses ar
     JOIN assessment_questions aq ON ar.question_id = aq.id
     JOIN competencies c ON aq.competency_id = c.id
     WHERE ar.respondent_id = ?
-    ORDER BY c.keyword, ar.created_at
+    ORDER BY c.name, ar.created_at
   `).bind(respondentId).all()
   
   if (!responses || responses.length === 0) {
