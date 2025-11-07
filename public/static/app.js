@@ -2563,12 +2563,15 @@ function updateNavigationButtons() {
 
 // 문항 컨테이너로 스크롤
 function scrollToQuestionsContainer() {
-  const container = document.getElementById('questions-container')
-  if (container) {
-    // 컨테이너 위치에서 약간 위쪽으로 오프셋 (헤더 고려)
-    const containerTop = container.getBoundingClientRect().top + window.pageYOffset - 100
-    window.scrollTo({ top: containerTop, behavior: 'smooth' })
-  }
+  // DOM 업데이트를 기다린 후 스크롤
+  setTimeout(() => {
+    const container = document.getElementById('questions-container')
+    if (container) {
+      // 컨테이너 위치에서 약간 위쪽으로 오프셋 (헤더 고려)
+      const containerTop = container.getBoundingClientRect().top + window.pageYOffset - 100
+      window.scrollTo({ top: containerTop, behavior: 'smooth' })
+    }
+  }, 100)
 }
 
 // 이전 페이지
