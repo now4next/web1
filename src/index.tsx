@@ -979,9 +979,15 @@ app.get('/api/analysis/:respondentId', async (c) => {
   const db = c.env.DB
   const respondentId = c.req.param('respondentId')
   
-  // 응답자 정보
+  // 응답자 정보 (users 테이블과 JOIN하여 최신 직급 정보 가져오기)
   const respondent = await db.prepare(`
-    SELECT * FROM respondents WHERE id = ?
+    SELECT 
+      r.*,
+      COALESCE(u.position, r.position) as position,
+      COALESCE(u.organization, r.department) as department
+    FROM respondents r
+    LEFT JOIN users u ON r.email = u.email
+    WHERE r.id = ?
   `).bind(respondentId).first()
   
   if (!respondent) {
