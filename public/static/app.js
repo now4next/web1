@@ -244,6 +244,14 @@ async function generateQuestions() {
       </div>
     `
     
+    // 로딩 화면으로 자동 스크롤 (화면 중앙에 배치)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        console.log('✅ Scrolled to loading screen (centered)')
+      })
+    })
+    
     const response = await axios.post('/api/ai/generate-questions', {
       competency_keywords: selectedCompetencies.map(c => c.keyword),
       target_level: targetLevel,
@@ -264,6 +272,14 @@ async function generateQuestions() {
       }))
       
       renderGeneratedQuestions(data, isDemo)
+      
+      // 생성된 결과로 자동 스크롤
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          console.log('✅ Scrolled to generated questions')
+        })
+      })
     } else {
       contentDiv.innerHTML = `
         <div class="text-center py-8">
@@ -2137,8 +2153,13 @@ async function composeAssessment() {
     const previewArea = document.getElementById('assessment-preview')
     if (previewArea) {
       previewArea.classList.remove('hidden')
-      // 진단 영역으로 스크롤
-      previewArea.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // 진단 영역으로 자동 스크롤 (DOM 준비 후)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          previewArea.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          console.log('✅ Scrolled to assessment preview area')
+        })
+      })
     }
     
   } catch (error) {
@@ -2270,6 +2291,14 @@ function renderAssessmentPage() {
       `}
     </div>
   `
+  
+  // 문항 컨테이너로 자동 스크롤 (페이지 이동 후)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      console.log('✅ Scrolled to questions container after page navigation')
+    })
+  })
 }
 
 // 역량 진단 페이지 이동
@@ -2557,8 +2586,13 @@ async function startAssessment() {
     // 첫 페이지 렌더링
     renderQuestionsPage()
     
-    // 실행 영역으로 스크롤
-    execArea.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 실행 영역으로 자동 스크롤 (DOM 준비 후)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        execArea.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        console.log('✅ Scrolled to assessment execution area')
+      })
+    })
     
   } catch (error) {
     console.error('Error starting assessment:', error)
