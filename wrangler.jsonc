@@ -9,8 +9,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "aiassess-production",
-      "database_id": "c8ebe20f-e16a-49d1-9ef5-3a691d91b51c"
+      "database_name": "aiassess-db",
+      "database_id": "c6247a63-ee1f-4536-b0af-9ae1588c0e23"
     }
   ]
 }

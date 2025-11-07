@@ -61,40 +61,29 @@ app.get('/api/competencies/search', async (c) => {
     
     const query = c.req.query('q') || ''
     
-    // Search across competencies, job_name, and behavioral_indicators
+    // Search across competencies, jobs, and behavioral_indicators
     // Use DISTINCT to avoid duplicate results when multiple indicators match
-    try {
-      const { results } = await db.prepare(`
-        SELECT DISTINCT c.*, cm.name as model_name, cm.type as model_type
-        FROM competencies c
-        JOIN competency_models cm ON c.model_id = cm.id
-        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
-        WHERE c.keyword LIKE ? 
-          OR c.description LIKE ? 
-          OR c.job_name LIKE ?
-          OR cm.name LIKE ?
-          OR bi.indicator_text LIKE ?
-        ORDER BY c.created_at DESC
-      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
-      
-      return c.json({ success: true, data: results })
-    } catch (sqlError) {
-      // Fallback: job_name column doesn't exist yet (before migration)
-      console.log('Fallback to search without job_name column')
-      const { results } = await db.prepare(`
-        SELECT DISTINCT c.*, cm.name as model_name, cm.type as model_type
-        FROM competencies c
-        JOIN competency_models cm ON c.model_id = cm.id
-        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
-        WHERE c.keyword LIKE ? 
-          OR c.description LIKE ? 
-          OR cm.name LIKE ?
-          OR bi.indicator_text LIKE ?
-        ORDER BY c.created_at DESC
-      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
-      
-      return c.json({ success: true, data: results })
-    }
+    const { results } = await db.prepare(`
+      SELECT DISTINCT 
+        c.id,
+        c.name as keyword,
+        c.definition as description,
+        c.job_id,
+        j.name as job_name,
+        j.description as job_description,
+        c.created_at
+      FROM competencies c
+      JOIN jobs j ON c.job_id = j.id
+      LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
+      WHERE c.name LIKE ? 
+        OR c.definition LIKE ? 
+        OR j.name LIKE ?
+        OR j.description LIKE ?
+        OR bi.indicator_text LIKE ?
+      ORDER BY c.sort_order ASC, c.created_at DESC
+    `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
+    
+    return c.json({ success: true, data: results })
   } catch (error) {
     console.error('Search error:', error)
     return c.json({ 
