@@ -229,18 +229,6 @@ async function generateQuestions() {
           <i class="fas fa-spinner fa-spin"></i>
           <span>잠시만 기다려주세요 (약 10-20초 소요)</span>
         </div>
-        <div class="mt-6 max-w-md mx-auto">
-          <div class="bg-blue-50 rounded-lg p-4">
-            <p class="text-sm text-blue-800 mb-2">
-              <i class="fas fa-lightbulb mr-2"></i>생성 중인 내용:
-            </p>
-            <ul class="text-xs text-blue-700 space-y-1 text-left">
-              <li>• 역량별 행동지표 분석</li>
-              <li>• 맞춤형 진단 문항 작성</li>
-              <li>• 평가 기준 설정</li>
-            </ul>
-          </div>
-        </div>
       </div>
     `
     
