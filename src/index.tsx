@@ -599,6 +599,122 @@ app.post('/api/auth/logout', async (c) => {
   }
 })
 
+// 프로필 업데이트
+app.put('/api/auth/profile', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const authHeader = c.req.header('Authorization')
+    const sessionToken = authHeader?.replace('Bearer ', '')
+    
+    if (!sessionToken) {
+      return c.json({ success: false, error: 'No session token' }, 401)
+    }
+    
+    // 세션으로 사용자 ID 조회
+    const { results: sessions } = await db.prepare(`
+      SELECT user_id FROM user_sessions 
+      WHERE session_token = ? AND expires_at > datetime('now')
+      LIMIT 1
+    `).bind(sessionToken).all()
+    
+    if (!sessions || sessions.length === 0) {
+      return c.json({ success: false, error: 'Invalid or expired session' }, 401)
+    }
+    
+    const userId = sessions[0].user_id
+    const body = await c.req.json()
+    const { name, position, organization } = body
+    
+    // 입력 검증
+    if (!name) {
+      return c.json({ success: false, error: '이름은 필수입니다.' }, 400)
+    }
+    
+    // 사용자 정보 업데이트
+    await db.prepare(`
+      UPDATE users 
+      SET name = ?, 
+          position = ?, 
+          organization = ?, 
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(name, position || null, organization || null, userId).run()
+    
+    // 업데이트된 사용자 정보 반환
+    const { results: users } = await db.prepare(`
+      SELECT id, name, email, position, organization, status
+      FROM users 
+      WHERE id = ?
+      LIMIT 1
+    `).bind(userId).all()
+    
+    return c.json({ 
+      success: true, 
+      data: { user: users[0] }
+    })
+  } catch (error: any) {
+    console.error('Profile update error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// 회원탈퇴
+app.delete('/api/auth/account', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const authHeader = c.req.header('Authorization')
+    const sessionToken = authHeader?.replace('Bearer ', '')
+    
+    if (!sessionToken) {
+      return c.json({ success: false, error: 'No session token' }, 401)
+    }
+    
+    // 세션으로 사용자 ID 조회
+    const { results: sessions } = await db.prepare(`
+      SELECT user_id FROM user_sessions 
+      WHERE session_token = ? AND expires_at > datetime('now')
+      LIMIT 1
+    `).bind(sessionToken).all()
+    
+    if (!sessions || sessions.length === 0) {
+      return c.json({ success: false, error: 'Invalid or expired session' }, 401)
+    }
+    
+    const userId = sessions[0].user_id
+    
+    // 사용자 상태를 'deleted'로 변경 (실제 삭제 대신 소프트 삭제)
+    await db.prepare(`
+      UPDATE users 
+      SET status = 'deleted', 
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(userId).run()
+    
+    // 모든 세션 삭제
+    await db.prepare(`
+      DELETE FROM user_sessions WHERE user_id = ?
+    `).bind(userId).run()
+    
+    return c.json({ 
+      success: true,
+      message: '회원탈퇴가 완료되었습니다.'
+    })
+  } catch (error: any) {
+    console.error('Account deletion error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // ==================== 진단 세션 API ====================
 
 // 진단 세션 생성
@@ -1533,7 +1649,7 @@ app.get('/', (c) => {
                         
                         <!-- User Menu -->
                         <div id="user-menu" class="hidden">
-                            <button onclick="handleLogout()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <button onclick="showProfileModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                                 <i class="fas fa-user-circle mr-2"></i>
                                 <span id="user-name"></span>
                             </button>
@@ -1981,6 +2097,50 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- 프로필 모달 -->
+        <div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">프로필 관리</h2>
+                        <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 프로필 정보 폼 -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">이름 *</label>
+                            <input type="text" id="profile-name" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
+                            <input type="email" id="profile-email" class="w-full rounded-lg border-gray-300 bg-gray-50 shadow-sm" disabled>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
+                            <input type="text" id="profile-position" placeholder="예: 사원, 대리, 과장" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">소속 조직</label>
+                            <input type="text" id="profile-organization" placeholder="예: 마케팅팀, 전략기획팀" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- 버튼 그룹 -->
+                    <div class="mt-6 space-y-3">
+                        <button onclick="handleProfileUpdate()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            정보 수정
+                        </button>
+                        <button onclick="handleAccountDeletion()" class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                            회원 탈퇴
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script>
             // Smooth scroll to features section
@@ -2167,6 +2327,128 @@ app.get('/', (c) => {
                 
                 clearSessionToken();
                 updateUIForLoggedOutUser();
+            }
+            
+            // ==================== 프로필 관련 함수 ====================
+            
+            // 프로필 모달 표시
+            async function showProfileModal() {
+                const token = getSessionToken();
+                
+                if (!token) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+                
+                try {
+                    // 현재 사용자 정보 가져오기
+                    const response = await axios.get('/api/auth/me', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (response.data.success) {
+                        const user = response.data.data.user;
+                        
+                        // 폼에 현재 정보 채우기
+                        document.getElementById('profile-name').value = user.name || '';
+                        document.getElementById('profile-email').value = user.email || '';
+                        document.getElementById('profile-position').value = user.position || '';
+                        document.getElementById('profile-organization').value = user.organization || '';
+                        
+                        // 모달 표시
+                        document.getElementById('profile-modal').classList.remove('hidden');
+                    } else {
+                        alert('사용자 정보를 불러올 수 없습니다.');
+                    }
+                } catch (error) {
+                    console.error('Profile load error:', error);
+                    alert('사용자 정보를 불러오는 중 오류가 발생했습니다.');
+                }
+            }
+            
+            // 프로필 모달 닫기
+            function closeProfileModal() {
+                document.getElementById('profile-modal').classList.add('hidden');
+            }
+            
+            // 프로필 업데이트 처리
+            async function handleProfileUpdate() {
+                const token = getSessionToken();
+                
+                if (!token) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+                
+                const name = document.getElementById('profile-name').value.trim();
+                const position = document.getElementById('profile-position').value.trim();
+                const organization = document.getElementById('profile-organization').value.trim();
+                
+                if (!name) {
+                    alert('이름은 필수 항목입니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.put('/api/auth/profile', {
+                        name,
+                        position,
+                        organization
+                    }, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (response.data.success) {
+                        alert('프로필이 성공적으로 업데이트되었습니다.');
+                        
+                        // UI 업데이트
+                        const user = response.data.data.user;
+                        document.getElementById('user-name').textContent = user.name;
+                        
+                        closeProfileModal();
+                    } else {
+                        alert('프로필 업데이트 실패: ' + (response.data.error || '알 수 없는 오류'));
+                    }
+                } catch (error) {
+                    console.error('Profile update error:', error);
+                    alert('프로필 업데이트 중 오류가 발생했습니다.');
+                }
+            }
+            
+            // 회원탈퇴 처리
+            async function handleAccountDeletion() {
+                if (!confirm('정말로 회원탈퇴를 진행하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                    return;
+                }
+                
+                const token = getSessionToken();
+                
+                if (!token) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.delete('/api/auth/account', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (response.data.success) {
+                        alert('회원탈퇴가 완료되었습니다.');
+                        
+                        clearSessionToken();
+                        closeProfileModal();
+                        updateUIForLoggedOutUser();
+                        
+                        // 홈으로 이동
+                        window.location.href = '/';
+                    } else {
+                        alert('회원탈퇴 실패: ' + (response.data.error || '알 수 없는 오류'));
+                    }
+                } catch (error) {
+                    console.error('Account deletion error:', error);
+                    alert('회원탈퇴 중 오류가 발생했습니다.');
+                }
             }
             
             // 로그인 상태 UI 업데이트
