@@ -396,6 +396,211 @@ app.post('/api/ai/generate-questions', async (c) => {
   }
 })
 
+// ==================== 사용자 인증 API ====================
+
+// 회원가입 (간단한 정보만 입력)
+app.post('/api/auth/signup', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const body = await c.req.json()
+    const { name, email, position, organization } = body
+    
+    // 입력 검증
+    if (!name || !email) {
+      return c.json({ success: false, error: '이름과 이메일은 필수입니다.' }, 400)
+    }
+    
+    // 이메일 중복 체크
+    const { results: existingUsers } = await db.prepare(`
+      SELECT id FROM users WHERE email = ? LIMIT 1
+    `).bind(email).all()
+    
+    if (existingUsers && existingUsers.length > 0) {
+      return c.json({ success: false, error: '이미 등록된 이메일입니다.' }, 400)
+    }
+    
+    // 사용자 생성
+    const result = await db.prepare(`
+      INSERT INTO users (name, email, position, organization, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).bind(name, email, position || null, organization || null).run()
+    
+    const userId = result.meta.last_row_id
+    
+    // 세션 토큰 생성 (간단한 랜덤 토큰)
+    const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2)}`
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30일
+    
+    await db.prepare(`
+      INSERT INTO user_sessions (user_id, session_token, expires_at, created_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `).bind(userId, sessionToken, expiresAt).run()
+    
+    // 마지막 로그인 시간 업데이트
+    await db.prepare(`
+      UPDATE users SET last_login_at = datetime('now') WHERE id = ?
+    `).bind(userId).run()
+    
+    return c.json({ 
+      success: true, 
+      data: {
+        user: { id: userId, name, email, position, organization },
+        sessionToken
+      }
+    })
+  } catch (error: any) {
+    console.error('Signup error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// 로그인 (이메일만으로 간단 로그인)
+app.post('/api/auth/login', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const body = await c.req.json()
+    const { email } = body
+    
+    if (!email) {
+      return c.json({ success: false, error: '이메일을 입력하세요.' }, 400)
+    }
+    
+    // 사용자 조회
+    const { results: users } = await db.prepare(`
+      SELECT id, name, email, position, organization, status
+      FROM users 
+      WHERE email = ? AND status = 'active'
+      LIMIT 1
+    `).bind(email).all()
+    
+    if (!users || users.length === 0) {
+      return c.json({ success: false, error: '등록되지 않은 이메일입니다.' }, 404)
+    }
+    
+    const user = users[0]
+    
+    // 기존 세션 삭제 (선택적)
+    await db.prepare(`
+      DELETE FROM user_sessions WHERE user_id = ? AND expires_at < datetime('now')
+    `).bind(user.id).run()
+    
+    // 새 세션 토큰 생성
+    const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2)}`
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    
+    await db.prepare(`
+      INSERT INTO user_sessions (user_id, session_token, expires_at, created_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `).bind(user.id, sessionToken, expiresAt).run()
+    
+    // 마지막 로그인 시간 업데이트
+    await db.prepare(`
+      UPDATE users SET last_login_at = datetime('now') WHERE id = ?
+    `).bind(user.id).run()
+    
+    return c.json({ 
+      success: true, 
+      data: {
+        user,
+        sessionToken
+      }
+    })
+  } catch (error: any) {
+    console.error('Login error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// 세션 확인 (로그인 체크)
+app.get('/api/auth/me', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const authHeader = c.req.header('Authorization')
+    const sessionToken = authHeader?.replace('Bearer ', '')
+    
+    if (!sessionToken) {
+      return c.json({ success: false, error: 'No session token' }, 401)
+    }
+    
+    // 세션 조회
+    const { results: sessions } = await db.prepare(`
+      SELECT 
+        s.user_id,
+        s.expires_at,
+        u.id,
+        u.name,
+        u.email,
+        u.position,
+        u.organization,
+        u.status
+      FROM user_sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.session_token = ? AND s.expires_at > datetime('now')
+      LIMIT 1
+    `).bind(sessionToken).all()
+    
+    if (!sessions || sessions.length === 0) {
+      return c.json({ success: false, error: 'Invalid or expired session' }, 401)
+    }
+    
+    const user = {
+      id: sessions[0].id,
+      name: sessions[0].name,
+      email: sessions[0].email,
+      position: sessions[0].position,
+      organization: sessions[0].organization,
+      status: sessions[0].status
+    }
+    
+    return c.json({ success: true, data: { user } })
+  } catch (error: any) {
+    console.error('Session check error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// 로그아웃
+app.post('/api/auth/logout', async (c) => {
+  const db = c.env.DB
+  
+  if (!db) {
+    return c.json({ success: false, error: 'Database not configured' }, 500)
+  }
+  
+  try {
+    const authHeader = c.req.header('Authorization')
+    const sessionToken = authHeader?.replace('Bearer ', '')
+    
+    if (sessionToken) {
+      await db.prepare(`
+        DELETE FROM user_sessions WHERE session_token = ?
+      `).bind(sessionToken).run()
+    }
+    
+    return c.json({ success: true })
+  } catch (error: any) {
+    console.error('Logout error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ==================== 진단 세션 API ====================
+
 // 진단 세션 생성
 app.post('/api/assessment-sessions', async (c) => {
   const db = c.env.DB
@@ -1203,6 +1408,22 @@ app.get('/', (c) => {
                         <button onclick="showTab('action', this)" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50">
                             <i class="fas fa-rocket mr-2"></i>실행 지원
                         </button>
+                        
+                        <!-- User Menu -->
+                        <div id="user-menu" class="hidden">
+                            <button onclick="handleLogout()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                                <i class="fas fa-user-circle mr-2"></i>
+                                <span id="user-name"></span>
+                            </button>
+                            <button onclick="handleLogout()" class="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+                                로그아웃
+                            </button>
+                        </div>
+                        
+                        <!-- Login Button -->
+                        <button id="login-btn" onclick="showLoginModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1613,6 +1834,62 @@ app.get('/', (c) => {
             </div>
         </main>
 
+        <!-- 회원가입/로그인 모달 -->
+        <div id="auth-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="modal-title" class="text-2xl font-bold text-gray-800">회원가입</h2>
+                        <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 로그인 폼 -->
+                    <div id="login-form" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
+                            <input type="email" id="login-email" placeholder="your@email.com" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <button onclick="handleLogin()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            로그인
+                        </button>
+                        <p class="mt-4 text-center text-sm text-gray-600">
+                            계정이 없으신가요? <button onclick="showSignupForm()" class="text-blue-600 hover:underline">회원가입</button>
+                        </p>
+                    </div>
+                    
+                    <!-- 회원가입 폼 -->
+                    <div id="signup-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">이름 *</label>
+                                <input type="text" id="signup-name" placeholder="홍길동" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">이메일 *</label>
+                                <input type="email" id="signup-email" placeholder="your@email.com" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
+                                <input type="text" id="signup-position" placeholder="예: 사원, 대리, 과장" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">소속 조직</label>
+                                <input type="text" id="signup-organization" placeholder="예: 마케팅팀, 전략기획팀" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <button onclick="handleSignup()" class="w-full mt-6 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            가입하고 시작하기
+                        </button>
+                        <p class="mt-4 text-center text-sm text-gray-600">
+                            이미 계정이 있으신가요? <button onclick="showLoginForm()" class="text-blue-600 hover:underline">로그인</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script>
             // Smooth scroll to features section
@@ -1625,10 +1902,61 @@ app.get('/', (c) => {
 
             // Smooth scroll to Phase 1: Assessment section
             function scrollToAssessment() {
-                // First activate the assess tab
-                showTab('assess', document.querySelector('.nav-btn'));
+                // 로그인 체크
+                checkAuthAndProceed();
+            }
+            
+            // ==================== 인증 관련 함수 ====================
+            
+            // 로컬스토리지에서 세션 토큰 가져오기
+            function getSessionToken() {
+                return localStorage.getItem('sessionToken');
+            }
+            
+            // 세션 토큰 저장
+            function setSessionToken(token) {
+                localStorage.setItem('sessionToken', token);
+            }
+            
+            // 세션 토큰 삭제
+            function clearSessionToken() {
+                localStorage.removeItem('sessionToken');
+            }
+            
+            // 로그인 상태 체크 및 진단 진행
+            async function checkAuthAndProceed() {
+                const token = getSessionToken();
                 
-                // Then scroll to Phase 1 section with a small delay to ensure tab is switched
+                if (!token) {
+                    // 로그인 안됨 - 회원가입 모달 표시
+                    showSignupModal();
+                    return;
+                }
+                
+                // 세션 유효성 체크
+                try {
+                    const response = await axios.get('/api/auth/me', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (response.data.success) {
+                        // 로그인됨 - Phase 1으로 이동
+                        proceedToAssessment();
+                    } else {
+                        // 세션 만료 - 회원가입 모달 표시
+                        clearSessionToken();
+                        showSignupModal();
+                    }
+                } catch (error) {
+                    // 세션 오류 - 회원가입 모달 표시
+                    clearSessionToken();
+                    showSignupModal();
+                }
+            }
+            
+            // Phase 1으로 진행
+            function proceedToAssessment() {
+                showTab('assess', document.querySelector('.nav-btn'));
                 setTimeout(() => {
                     const assessmentSection = document.getElementById('phase1-assessment');
                     if (assessmentSection) {
@@ -1636,6 +1964,159 @@ app.get('/', (c) => {
                     }
                 }, 100);
             }
+            
+            // 회원가입 모달 표시
+            function showSignupModal() {
+                document.getElementById('auth-modal').classList.remove('hidden');
+                document.getElementById('modal-title').textContent = '회원가입';
+                document.getElementById('signup-form').classList.remove('hidden');
+                document.getElementById('login-form').classList.add('hidden');
+            }
+            
+            // 로그인 모달 표시
+            function showLoginModal() {
+                document.getElementById('auth-modal').classList.remove('hidden');
+                document.getElementById('modal-title').textContent = '로그인';
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('signup-form').classList.add('hidden');
+            }
+            
+            // 모달 닫기
+            function closeAuthModal() {
+                document.getElementById('auth-modal').classList.add('hidden');
+            }
+            
+            // 로그인 폼 표시
+            function showLoginForm() {
+                document.getElementById('modal-title').textContent = '로그인';
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('signup-form').classList.add('hidden');
+            }
+            
+            // 회원가입 폼 표시
+            function showSignupForm() {
+                document.getElementById('modal-title').textContent = '회원가입';
+                document.getElementById('signup-form').classList.remove('hidden');
+                document.getElementById('login-form').classList.add('hidden');
+            }
+            
+            // 회원가입 처리
+            async function handleSignup() {
+                const name = document.getElementById('signup-name').value.trim();
+                const email = document.getElementById('signup-email').value.trim();
+                const position = document.getElementById('signup-position').value.trim();
+                const organization = document.getElementById('signup-organization').value.trim();
+                
+                if (!name || !email) {
+                    alert('이름과 이메일은 필수입니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.post('/api/auth/signup', {
+                        name, email, position, organization
+                    });
+                    
+                    if (response.data.success) {
+                        const { sessionToken, user } = response.data.data;
+                        setSessionToken(sessionToken);
+                        updateUIForLoggedInUser(user);
+                        closeAuthModal();
+                        
+                        // 회원가입 후 바로 Phase 1으로 이동
+                        proceedToAssessment();
+                    } else {
+                        alert(response.data.error || '회원가입 실패');
+                    }
+                } catch (error) {
+                    console.error('Signup error:', error);
+                    alert(error.response?.data?.error || '회원가입 중 오류가 발생했습니다.');
+                }
+            }
+            
+            // 로그인 처리
+            async function handleLogin() {
+                const email = document.getElementById('login-email').value.trim();
+                
+                if (!email) {
+                    alert('이메일을 입력하세요.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.post('/api/auth/login', { email });
+                    
+                    if (response.data.success) {
+                        const { sessionToken, user } = response.data.data;
+                        setSessionToken(sessionToken);
+                        updateUIForLoggedInUser(user);
+                        closeAuthModal();
+                    } else {
+                        alert(response.data.error || '로그인 실패');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    alert(error.response?.data?.error || '로그인 중 오류가 발생했습니다.');
+                }
+            }
+            
+            // 로그아웃 처리
+            async function handleLogout() {
+                const token = getSessionToken();
+                
+                if (token) {
+                    try {
+                        await axios.post('/api/auth/logout', {}, {
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        });
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                    }
+                }
+                
+                clearSessionToken();
+                updateUIForLoggedOutUser();
+            }
+            
+            // 로그인 상태 UI 업데이트
+            function updateUIForLoggedInUser(user) {
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-menu').classList.remove('hidden');
+                document.getElementById('user-name').textContent = user.name;
+            }
+            
+            // 로그아웃 상태 UI 업데이트
+            function updateUIForLoggedOutUser() {
+                document.getElementById('login-btn').classList.remove('hidden');
+                document.getElementById('user-menu').classList.add('hidden');
+                document.getElementById('user-name').textContent = '';
+            }
+            
+            // 페이지 로드 시 로그인 상태 체크
+            async function checkLoginStatus() {
+                const token = getSessionToken();
+                
+                if (token) {
+                    try {
+                        const response = await axios.get('/api/auth/me', {
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        });
+                        
+                        if (response.data.success) {
+                            updateUIForLoggedInUser(response.data.data.user);
+                        } else {
+                            clearSessionToken();
+                        }
+                    } catch (error) {
+                        clearSessionToken();
+                    }
+                }
+            }
+            
+            // 페이지 로드 시 실행
+            document.addEventListener('DOMContentLoaded', () => {
+                checkLoginStatus();
+            });
         </script>
         <script src="/static/app.js?v=26"></script>
     </body>
