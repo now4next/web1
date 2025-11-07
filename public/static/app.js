@@ -1186,11 +1186,18 @@ async function loadMyAssessments() {
         }
         const typeColorClass = typeColor[assessment.session_type] || 'bg-gray-100 text-gray-700'
         
-        // 역량 목록으로 제목 생성
-        const competenciesText = assessment.competencies && assessment.competencies.length > 0
-          ? assessment.competencies.join(', ')
-          : '역량'
-        const title = `[${competenciesText}] 진단`
+        // 역량 목록으로 제목 생성 (첫번째 역량 외 N개)
+        let title = '역량 진단'
+        if (assessment.competencies && assessment.competencies.length > 0) {
+          const firstCompetency = assessment.competencies[0]
+          const remainingCount = assessment.competencies.length - 1
+          
+          if (remainingCount > 0) {
+            title = `${firstCompetency} 외 ${remainingCount}개 역량`
+          } else {
+            title = firstCompetency
+          }
+        }
         
         return `
           <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
