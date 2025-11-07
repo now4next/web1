@@ -2448,14 +2448,14 @@ async function submitAssessment() {
       assessmentResponses = []
       currentAssessmentPage = 0
       
-      // 결과 분석 탭으로 이동
+      // 결과 분석 탭으로 이동 (자동 스크롤 포함)
       showTab('analytics', document.querySelector('.nav-btn'))
       
       // 결과 분석 자동 로드 (응답자 ID가 있으면)
       if (result.respondent_id) {
         setTimeout(() => {
-          viewResultsPage(result.respondent_id)
-        }, 500)
+          loadAnalysis(result.respondent_id)
+        }, 1000)
       }
     } else {
       // 오류 상세 정보 출력
