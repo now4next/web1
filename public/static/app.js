@@ -42,6 +42,42 @@ function showTab(tabName, buttonElement) {
       btn.classList.add('bg-blue-100', 'text-blue-700')
     }
   }
+  
+  // analytics 탭 선택 시 네비게이션 바로 아래로 스크롤
+  if (tabName === 'analytics') {
+    scrollToNavigation()
+  }
+}
+
+// 네비게이션 바로 아래로 스크롤
+function scrollToNavigation() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const nav = document.querySelector('nav')
+      if (nav) {
+        const navHeight = nav.offsetHeight
+        window.scrollTo({ 
+          top: navHeight, 
+          behavior: 'smooth' 
+        })
+        console.log('✅ Scrolled to navigation (height:', navHeight, ')')
+      }
+    })
+  })
+}
+
+// 홈으로 이동 (페이지 최상단 + 첫 번째 탭)
+function goToHome() {
+  // 첫 번째 탭으로 이동
+  showTab('assess', document.querySelector('.nav-btn'))
+  
+  // 페이지 최상단으로 스크롤
+  window.scrollTo({ 
+    top: 0, 
+    behavior: 'smooth' 
+  })
+  
+  console.log('🏠 Navigated to home')
 }
 
 // ============================================================================
@@ -2596,6 +2632,8 @@ function nextPage() {
 // 전역 함수를 window 객체에 명시적으로 할당 (존재하는 함수만)
 // ============================================================================
 if (typeof showTab !== 'undefined') window.showTab = showTab
+if (typeof scrollToNavigation !== 'undefined') window.scrollToNavigation = scrollToNavigation
+if (typeof goToHome !== 'undefined') window.goToHome = goToHome
 if (typeof searchCompetencies !== 'undefined') window.searchCompetencies = searchCompetencies
 if (typeof selectCompetency !== 'undefined') window.selectCompetency = selectCompetency
 if (typeof removeCompetency !== 'undefined') window.removeCompetency = removeCompetency

@@ -1400,9 +1400,9 @@ app.get('/', (c) => {
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
-                    <div class="flex items-center">
+                    <div class="flex items-center cursor-pointer" onclick="goToHome()">
                         <i class="fas fa-brain text-blue-600 text-2xl mr-3"></i>
-                        <h1 class="text-xl font-bold text-gray-800">AI 역량 진단 플랫폼</h1>
+                        <h1 class="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">AI 역량 진단 플랫폼</h1>
                     </div>
                     <div class="flex items-center space-x-4">
                         <button onclick="showTab('assess', this)" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-50 bg-blue-100 text-blue-700">
