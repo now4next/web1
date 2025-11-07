@@ -1848,7 +1848,16 @@ const originalShowTab = showTab
 window.showTab = function(tabName) {
   originalShowTab.call(this, tabName)
   if (tabName === 'analytics') {
-    scrollToNavigation()
+    // 결과 분석 탭으로 직접 스크롤 (Hero 섹션 건너뛰기)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const analyticsTab = document.getElementById('tab-analytics')
+        if (analyticsTab) {
+          analyticsTab.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          console.log('✅ Scrolled to analytics tab')
+        }
+      })
+    })
     loadMyAssessments()
   }
 }
