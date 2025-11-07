@@ -1091,8 +1091,16 @@ app.get('/api/analysis/:respondentId', async (c) => {
   const respondent = await db.prepare(`
     SELECT 
       r.*,
-      COALESCE(u.position, r.position) as position,
-      COALESCE(u.organization, r.department) as department
+      COALESCE(
+        NULLIF(u.position, ''),
+        NULLIF(r.position, ''),
+        '직급 미지정'
+      ) as position,
+      COALESCE(
+        NULLIF(u.organization, ''),
+        NULLIF(r.department, ''),
+        '부서 미지정'
+      ) as department
     FROM respondents r
     LEFT JOIN users u ON r.email = u.email
     WHERE r.id = ?
