@@ -1225,7 +1225,7 @@ app.get('/', (c) => {
                     </p>
                     
                     <!-- CTA Button -->
-                    <button onclick="showTab('assess', document.querySelector('.nav-btn'))" class="px-10 py-4 bg-blue-600 text-white rounded-lg font-medium text-lg hover:bg-blue-700 transition-colors duration-200 shadow-md">
+                    <button onclick="scrollToAssessment()" class="px-10 py-4 bg-blue-600 text-white rounded-lg font-medium text-lg hover:bg-blue-700 transition-colors duration-200 shadow-md">
                         역량 진단 시작하기
                     </button>
                     
@@ -1261,7 +1261,7 @@ app.get('/', (c) => {
         <main id="features" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- ASSESS Tab -->
             <div id="tab-assess" class="tab-content">
-                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div id="phase1-assessment" class="bg-white rounded-lg shadow p-6 mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">
                         <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
                         Phase 1: 진단 설계
@@ -1621,6 +1621,20 @@ app.get('/', (c) => {
                 if (featuresSection) {
                     featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
+            }
+
+            // Smooth scroll to Phase 1: Assessment section
+            function scrollToAssessment() {
+                // First activate the assess tab
+                showTab('assess', document.querySelector('.nav-btn'));
+                
+                // Then scroll to Phase 1 section with a small delay to ensure tab is switched
+                setTimeout(() => {
+                    const assessmentSection = document.getElementById('phase1-assessment');
+                    if (assessmentSection) {
+                        assessmentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
             }
         </script>
         <script src="/static/app.js?v=26"></script>
