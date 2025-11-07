@@ -2037,8 +2037,8 @@ function renderAssessmentPreview() {
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div><span class="text-gray-600">이름:</span> <span class="font-medium">${currentRespondentInfo.name || '-'}</span></div>
         <div><span class="text-gray-600">이메일:</span> <span class="font-medium">${currentRespondentInfo.email || '-'}</span></div>
-        <div><span class="text-gray-600">부서:</span> <span class="font-medium">${currentRespondentInfo.department || '-'}</span></div>
-        <div><span class="text-gray-600">직위:</span> <span class="font-medium">${currentRespondentInfo.position || '-'}</span></div>
+        <div><span class="text-gray-600">소속조직:</span> <span class="font-medium">${currentRespondentInfo.department || '-'}</span></div>
+        <div><span class="text-gray-600">직급:</span> <span class="font-medium">${currentRespondentInfo.level || '-'}</span></div>
       </div>
     </div>
     
