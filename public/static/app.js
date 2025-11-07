@@ -2566,16 +2566,31 @@ function scrollToQuestionsContainer() {
   // DOM 업데이트를 기다린 후 스크롤
   setTimeout(() => {
     const container = document.getElementById('questions-container')
+    console.log('Scroll function called, container found:', !!container)
+    
     if (container) {
-      // 컨테이너 위치에서 약간 위쪽으로 오프셋 (헤더 고려)
-      const containerTop = container.getBoundingClientRect().top + window.pageYOffset - 100
-      window.scrollTo({ top: containerTop, behavior: 'smooth' })
+      // 방법 1: scrollIntoView 사용 (더 안정적)
+      container.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start',
+        inline: 'nearest'
+      })
+      
+      // 추가 오프셋을 위해 약간 위로 조정
+      setTimeout(() => {
+        window.scrollBy({ top: -100, behavior: 'smooth' })
+      }, 50)
+      
+      console.log('Scrolled to questions container')
+    } else {
+      console.error('Questions container not found!')
     }
-  }, 100)
+  }, 150)
 }
 
 // 이전 페이지
 function previousPage() {
+  console.log('previousPage called, currentPage:', currentPage)
   if (currentPage > 0) {
     currentPage--
     renderQuestionsPage()
@@ -2585,11 +2600,16 @@ function previousPage() {
 
 // 다음 페이지
 function nextPage() {
+  console.log('nextPage called, currentPage:', currentPage, 'questionsPerPage:', questionsPerPage)
   const totalPages = Math.ceil(assessmentQuestions.length / questionsPerPage)
+  console.log('totalPages:', totalPages)
   if (currentPage < totalPages - 1) {
     currentPage++
+    console.log('Moving to page:', currentPage)
     renderQuestionsPage()
     scrollToQuestionsContainer()
+  } else {
+    console.log('Already on last page')
   }
 }
 
