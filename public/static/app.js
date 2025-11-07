@@ -180,43 +180,31 @@ async function generateQuestions() {
   const contentDiv = document.getElementById('generation-content')
   
   try {
+    // 항상 AI 문항 생성 시작
     resultDiv.classList.remove('hidden')
     contentDiv.innerHTML = `
-      <div class="text-center py-8">
-        <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600">저장된 문항을 확인하고 있습니다...</p>
-      </div>
-    `
-    
-    // 먼저 저장된 문항 확인
-    const savedResponse = await axios.post('/api/ai/get-saved-questions', {
-      competency_keywords: selectedCompetencies.map(c => c.keyword)
-    })
-    
-    if (savedResponse.data.success && savedResponse.data.data) {
-      // 저장된 문항이 있으면 표시
-      const savedData = savedResponse.data.data
-      
-      generatedData = {
-        behavioral_indicators: savedData.behavioral_indicators,
-        questions: savedData.questions,
-        guide: `📋 저장된 진단 문항\n\n본 진단은 ${selectedCompetencies.map(c => c.keyword).join(', ')} 역량을 평가하기 위한 진단입니다.\n\n✅ 이 문항들은 이전에 생성되어 저장된 문항입니다.\n\n💡 추가 문항이 필요하시면 "AI 문항 추가 생성" 버튼을 클릭하세요.`
-      }
-      
-      editableQuestions = savedData.questions.map((q, idx) => ({
-        id: idx,
-        ...q
-      }))
-      
-      renderGeneratedQuestions(generatedData, false, true)
-      return
-    }
-    
-    // 저장된 문항이 없으면 AI 생성
-    contentDiv.innerHTML = `
-      <div class="text-center py-8">
-        <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600">AI가 새로운 진단 문항을 생성하고 있습니다...</p>
+      <div class="text-center py-12">
+        <div class="inline-block animate-pulse">
+          <i class="fas fa-magic text-6xl text-blue-600 mb-6"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-3">AI 문항 생성 중...</h3>
+        <p class="text-gray-600 mb-4">선택하신 역량에 대한 진단 문항을 AI가 생성하고 있습니다.</p>
+        <div class="flex items-center justify-center space-x-2 text-sm text-gray-500">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>잠시만 기다려주세요 (약 10-20초 소요)</span>
+        </div>
+        <div class="mt-6 max-w-md mx-auto">
+          <div class="bg-blue-50 rounded-lg p-4">
+            <p class="text-sm text-blue-800 mb-2">
+              <i class="fas fa-lightbulb mr-2"></i>생성 중인 내용:
+            </p>
+            <ul class="text-xs text-blue-700 space-y-1 text-left">
+              <li>• 역량별 행동지표 분석</li>
+              <li>• 맞춤형 진단 문항 작성</li>
+              <li>• 평가 기준 설정</li>
+            </ul>
+          </div>
+        </div>
       </div>
     `
     
@@ -266,29 +254,10 @@ async function generateQuestions() {
 }
 
 // 생성된 문항 렌더링 (편집 가능)
-function renderGeneratedQuestions(data, isDemo, isSaved = false) {
+function renderGeneratedQuestions(data, isDemo = false) {
   const contentDiv = document.getElementById('generation-content')
   
   contentDiv.innerHTML = `
-    ${isSaved ? `
-    <!-- 저장된 문항 알림 -->
-    <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <i class="fas fa-check-circle text-green-600 mr-2"></i>
-          <div>
-            <h4 class="font-semibold text-green-900 mb-1">저장된 문항 로드됨</h4>
-            <p class="text-green-800 text-sm">
-              이전에 생성된 문항을 불러왔습니다. 추가 문항이 필요하시면 아래 버튼을 클릭하세요.
-            </p>
-          </div>
-        </div>
-        <button onclick="generateAdditionalQuestions()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap ml-4">
-          <i class="fas fa-plus mr-2"></i>AI 문항 추가 생성
-        </button>
-      </div>
-    </div>
-    ` : ''}
     ${isDemo ? `
     <!-- 데모 모드 알림 -->
     <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
@@ -437,7 +406,7 @@ async function generateAdditionalQuestions() {
       generatedData.questions = [...generatedData.questions, ...newData.questions]
       
       // 다시 렌더링
-      renderGeneratedQuestions(generatedData, response.data.demo, false)
+      renderGeneratedQuestions(generatedData, response.data.demo)
       
       // 성공 메시지
       alert(`✅ 새로운 문항이 추가되었습니다!\n\n행동지표: ${generatedData.behavioral_indicators.length - currentIndicatorCount}개 추가\n진단문항: ${editableQuestions.length - currentQuestionCount}개 추가`)
@@ -632,7 +601,7 @@ function showScaleSetup() {
         </div>
         
         <div class="flex gap-3">
-          <button onclick="renderGeneratedQuestions(generatedData, false)" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+          <button onclick="renderGeneratedQuestions(generatedData)" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
             <i class="fas fa-arrow-left mr-2"></i>뒤로
           </button>
           <button onclick="startAssessmentExecution()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
