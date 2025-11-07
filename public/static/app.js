@@ -1186,12 +1186,18 @@ async function loadMyAssessments() {
         }
         const typeColorClass = typeColor[assessment.session_type] || 'bg-gray-100 text-gray-700'
         
+        // 역량 목록으로 제목 생성
+        const competenciesText = assessment.competencies && assessment.competencies.length > 0
+          ? assessment.competencies.join(', ')
+          : '역량'
+        const title = `[${competenciesText}] 진단`
+        
         return `
           <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
                onclick="loadAnalysis(${assessment.respondent_id})">
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1">
-                <h4 class="font-semibold text-gray-800 text-lg mb-2">${assessment.session_name || '역량 진단'}</h4>
+                <h4 class="font-semibold text-gray-800 text-lg mb-2">${title}</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
                   <span class="${typeColorClass} px-3 py-1 rounded-full text-xs font-medium">
                     <i class="fas fa-clipboard-check mr-1"></i>${typeLabel}

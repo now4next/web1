@@ -1029,6 +1029,19 @@ app.get('/api/my-assessments', async (c) => {
     ORDER BY ase.created_at DESC
   `).bind(user.email).all()
   
+  // 각 진단 세션의 역량 정보 가져오기
+  for (const assessment of assessments) {
+    const { results: competencies } = await db.prepare(`
+      SELECT c.name
+      FROM session_competencies sc
+      JOIN competencies c ON sc.competency_id = c.id
+      WHERE sc.session_id = ?
+      ORDER BY c.name
+    `).bind(assessment.session_id).all()
+    
+    assessment.competencies = competencies.map(c => c.name)
+  }
+  
   return c.json({ 
     success: true, 
     data: assessments,
