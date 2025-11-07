@@ -1211,78 +1211,51 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Hero Section -->
-        <div class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white relative overflow-hidden">
-            <!-- Background Pattern -->
-            <div class="absolute inset-0 opacity-10">
-                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
-            </div>
-            
-            <!-- Content -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10">
-                <div class="text-center max-w-4xl mx-auto">
-                    <!-- Icon -->
-                    <div class="mb-6 inline-block">
-                        <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <i class="fas fa-chart-line text-4xl"></i>
-                        </div>
-                    </div>
-                    
+        <div class="bg-white border-b border-gray-200">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+                <div class="text-center">
                     <!-- Main Heading -->
-                    <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                        세상의 모든 사람이<br/>
-                        <span class="text-yellow-300">진정한 전문가</span>가 되도록
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-8 leading-relaxed">
+                        역량을 평가하고, 성장을 설계하는<br/>
+                        <span class="text-blue-600">AI 진단 플랫폼</span>
                     </h1>
                     
                     <!-- Description -->
-                    <div class="text-lg md:text-xl mb-8 leading-relaxed space-y-4 text-blue-50">
-                        <p class="font-medium">
-                            모든 사람은 스스로 자신의 분야에서 <strong class="text-white">전문가</strong>가 되고 싶어합니다.
-                        </p>
-                        <p>
-                            진정한 전문가는 스스로 자신의 역량과 수준을 항상 평가하여 객관화하고,<br class="hidden md:block"/>
-                            개발 계획을 수립하여 실행하는 사람입니다.
-                        </p>
-                        <p class="text-xl font-semibold text-yellow-200">
-                            세상의 모든 사람이 자기 분야에서 자신을 객관적으로 돌아보고<br class="hidden md:block"/>
-                            성장할 수 있도록 돕는 AI 역량 진단 플랫폼입니다.
-                        </p>
-                    </div>
+                    <p class="text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+                        전문가는 스스로 역량을 객관화하고 지속적으로 발전시킵니다.<br class="hidden md:block"/>
+                        AI가 당신의 역량을 진단하고, 성장 계획을 함께 만듭니다.
+                    </p>
                     
-                    <!-- CTA Buttons -->
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <button onclick="showTab('assess', document.querySelector('.nav-btn'))" class="px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
-                            <i class="fas fa-rocket mr-2"></i>
-                            지금 시작하기
-                        </button>
-                        <button onclick="scrollToFeatures()" class="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-all duration-200">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            자세히 알아보기
-                        </button>
-                    </div>
+                    <!-- CTA Button -->
+                    <button onclick="showTab('assess', document.querySelector('.nav-btn'))" class="px-10 py-4 bg-blue-600 text-white rounded-lg font-medium text-lg hover:bg-blue-700 transition-colors duration-200 shadow-md">
+                        역량 진단 시작하기
+                    </button>
                     
-                    <!-- Stats -->
-                    <div class="mt-12 grid grid-cols-3 gap-8 text-center">
-                        <div class="space-y-2">
-                            <div class="text-3xl md:text-4xl font-bold text-yellow-300">AI</div>
-                            <div class="text-sm text-blue-100">지능형 분석</div>
+                    <!-- Features -->
+                    <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                        <div class="space-y-3">
+                            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mx-auto">
+                                <i class="fas fa-brain text-blue-600 text-xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">AI 기반 진단</h3>
+                            <p class="text-sm text-gray-600">역량별 맞춤 질문 자동 생성</p>
                         </div>
-                        <div class="space-y-2">
-                            <div class="text-3xl md:text-4xl font-bold text-yellow-300">3단계</div>
-                            <div class="text-sm text-blue-100">진단-분석-실행</div>
+                        <div class="space-y-3">
+                            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mx-auto">
+                                <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">정확한 분석</h3>
+                            <p class="text-sm text-gray-600">강점과 개선점을 명확히 파악</p>
                         </div>
-                        <div class="space-y-2">
-                            <div class="text-3xl md:text-4xl font-bold text-yellow-300">실시간</div>
-                            <div class="text-sm text-blue-100">즉시 결과 확인</div>
+                        <div class="space-y-3">
+                            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mx-auto">
+                                <i class="fas fa-route text-blue-600 text-xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-gray-900">실행 계획</h3>
+                            <p class="text-sm text-gray-600">즉시 적용 가능한 개발 로드맵</p>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Wave Divider -->
-            <div class="absolute bottom-0 left-0 right-0">
-                <svg class="w-full h-12 md:h-16 fill-current text-gray-50" viewBox="0 0 1440 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0,48 C360,16 720,0 1080,16 C1320,28 1380,44 1440,48 L1440,48 L0,48 Z"></path>
-                </svg>
             </div>
         </div>
 
