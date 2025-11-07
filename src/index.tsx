@@ -870,11 +870,41 @@ app.post('/api/submit-assessment', async (c) => {
       }
     }
     
+    // 4. 세션에 사용된 역량 저장 (session_competencies)
+    const uniqueCompetencies = new Set<number>()
+    for (const resp of responses) {
+      // 역량으로 competency_id 찾기
+      const competency = await db.prepare(`
+        SELECT id FROM competencies WHERE name = ?
+      `).bind(resp.competency).first()
+      
+      if (competency) {
+        uniqueCompetencies.add(competency.id as number)
+      }
+    }
+    
+    // session_competencies 테이블에 저장 (중복 방지)
+    for (const competencyId of uniqueCompetencies) {
+      // 이미 존재하는지 확인
+      const existing = await db.prepare(`
+        SELECT id FROM session_competencies 
+        WHERE session_id = ? AND competency_id = ?
+      `).bind(sessionId, competencyId).first()
+      
+      if (!existing) {
+        await db.prepare(`
+          INSERT INTO session_competencies (session_id, competency_id)
+          VALUES (?, ?)
+        `).bind(sessionId, competencyId).run()
+      }
+    }
+    
     return c.json({ 
       success: true, 
       session_id: sessionId,
       respondent_id: respondentId,
       saved_count: savedResponses.length,
+      competencies_saved: uniqueCompetencies.size,
       message: '진단이 성공적으로 제출되었습니다!'
     })
   } catch (error: any) {

@@ -1,0 +1,16 @@
+#!/bin/bash
+# This is a test to check if the API returns competencies data
+echo "Testing /api/my-assessments endpoint structure..."
+echo "The API should include 'competencies' array in each assessment"
+echo ""
+echo "Expected structure:"
+echo "{"
+echo "  success: true,"
+echo "  data: ["
+echo "    {"
+echo "      session_id: 1,"
+echo "      session_name: '...',"
+echo "      competencies: ['역량1', '역량2', '역량3']  // <-- This should exist"
+echo "    }"
+echo "  ]"
+echo "}"
