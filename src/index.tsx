@@ -61,28 +61,37 @@ app.get('/api/competencies/search', async (c) => {
     
     const query = c.req.query('q') || ''
     
-    // Try with job_name column first (after migration)
-    // Fall back to without job_name if column doesn't exist
+    // Search across competencies, job_name, and behavioral_indicators
+    // Use DISTINCT to avoid duplicate results when multiple indicators match
     try {
       const { results } = await db.prepare(`
-        SELECT c.*, cm.name as model_name, cm.type as model_type
+        SELECT DISTINCT c.*, cm.name as model_name, cm.type as model_type
         FROM competencies c
         JOIN competency_models cm ON c.model_id = cm.id
-        WHERE c.keyword LIKE ? OR c.description LIKE ? OR c.job_name LIKE ?
+        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
+        WHERE c.keyword LIKE ? 
+          OR c.description LIKE ? 
+          OR c.job_name LIKE ?
+          OR cm.name LIKE ?
+          OR bi.indicator_text LIKE ?
         ORDER BY c.created_at DESC
-      `).bind(`%${query}%`, `%${query}%`, `%${query}%`).all()
+      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
       
       return c.json({ success: true, data: results })
     } catch (sqlError) {
       // Fallback: job_name column doesn't exist yet (before migration)
       console.log('Fallback to search without job_name column')
       const { results } = await db.prepare(`
-        SELECT c.*, cm.name as model_name, cm.type as model_type
+        SELECT DISTINCT c.*, cm.name as model_name, cm.type as model_type
         FROM competencies c
         JOIN competency_models cm ON c.model_id = cm.id
-        WHERE c.keyword LIKE ? OR c.description LIKE ?
+        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
+        WHERE c.keyword LIKE ? 
+          OR c.description LIKE ? 
+          OR cm.name LIKE ?
+          OR bi.indicator_text LIKE ?
         ORDER BY c.created_at DESC
-      `).bind(`%${query}%`, `%${query}%`).all()
+      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
       
       return c.json({ success: true, data: results })
     }
