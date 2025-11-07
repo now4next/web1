@@ -334,10 +334,10 @@ function renderGeneratedQuestions(data, isDemo = false) {
       <p class="text-blue-800 text-sm whitespace-pre-line">${data.guide}</p>
     </div>
     
-    <!-- 행동 지표 -->
+    <!-- 역량 및 행동지표 -->
     <div class="mb-6">
       <h4 class="font-semibold text-gray-800 mb-3">
-        <i class="fas fa-list-check mr-2 text-green-600"></i>행동 지표 (Behavioral Indicators)
+        <i class="fas fa-list-check mr-2 text-green-600"></i>역량(Competency) 및 행동지표(Behavioral Indicators)
       </h4>
       ${data.behavioral_indicators.map(bi => `
         <div class="mb-4 p-4 bg-white border rounded-lg">
