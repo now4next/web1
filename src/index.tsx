@@ -1563,58 +1563,10 @@ app.get('/', (c) => {
                         Phase 2: 진단 설정
                     </h2>
                     
-                    <!-- Step 1: 응답자 기본 정보 -->
-                    <div id="respondent-info-section" class="mb-8">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">1</span>
-                            응답자 정보 입력
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">이름 *</label>
-                                <input 
-                                    type="text" 
-                                    id="exec-name" 
-                                    placeholder="홍길동"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    required
-                                >
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">이메일 *</label>
-                                <input 
-                                    type="email" 
-                                    id="exec-email" 
-                                    placeholder="hong@example.com"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    required
-                                >
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">부서</label>
-                                <input 
-                                    type="text" 
-                                    id="exec-department" 
-                                    placeholder="전략기획팀"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                >
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">직급</label>
-                                <input 
-                                    type="text" 
-                                    id="exec-level" 
-                                    placeholder="예: 사원, 대리, 과장, 차장, 팀장"
-                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Step 2: 응답 척도 설정 -->
+                    <!-- Step 1: 응답 척도 설정 -->
                     <div id="scale-settings-section" class="mb-8">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">1</span>
                             응답 척도 설정
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1640,10 +1592,10 @@ app.get('/', (c) => {
                         </div>
                     </div>
 
-                    <!-- Step 3: 진단 문항 디스플레이 설정 -->
+                    <!-- Step 2: 진단 문항 디스플레이 설정 -->
                     <div id="display-settings-section" class="mb-8">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">3</span>
+                            <span class="bg-blue-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center mr-2 text-sm">2</span>
                             진단 문항 디스플레이 설정
                         </h3>
                         <div>
