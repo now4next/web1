@@ -2532,29 +2532,36 @@ function updateNavigationButtons() {
 
 // 문항 컨테이너로 스크롤
 function scrollToQuestionsContainer() {
-  // DOM 업데이트를 기다린 후 스크롤
-  setTimeout(() => {
-    const container = document.getElementById('questions-container')
-    console.log('Scroll function called, container found:', !!container)
-    
-    if (container) {
-      // 방법 1: scrollIntoView 사용 (더 안정적)
-      container.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start',
-        inline: 'nearest'
-      })
+  // requestAnimationFrame을 사용하여 브라우저 렌더링 완료 후 스크롤
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const container = document.getElementById('questions-container')
+      console.log('🔍 Scroll function called, container found:', !!container)
       
-      // 추가 오프셋을 위해 약간 위로 조정
-      setTimeout(() => {
-        window.scrollBy({ top: -100, behavior: 'smooth' })
-      }, 50)
-      
-      console.log('Scrolled to questions container')
-    } else {
-      console.error('Questions container not found!')
-    }
-  }, 150)
+      if (container) {
+        // 첫 번째 문항 요소 찾기
+        const firstQuestion = container.querySelector('.border.rounded-lg')
+        const targetElement = firstQuestion || container
+        
+        console.log('📍 Target element:', targetElement.tagName, targetElement.className)
+        
+        // 스크롤 실행
+        targetElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        })
+        
+        // 약간의 오프셋 조정 (헤더 공간 확보)
+        setTimeout(() => {
+          window.scrollBy({ top: -120, behavior: 'smooth' })
+          console.log('✅ Scrolled to questions container')
+        }, 100)
+      } else {
+        console.error('❌ Questions container not found!')
+      }
+    })
+  })
 }
 
 // 이전 페이지
