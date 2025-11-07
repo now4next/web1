@@ -1903,22 +1903,20 @@ function setQuestionDisplayFromSelect() {
 
 // 진단지 구성하기 버튼 상태 체크
 function checkComposeButtonState() {
-  const nameElement = document.getElementById('exec-name')
-  const emailElement = document.getElementById('exec-email')
   const composeBtn = document.getElementById('compose-assessment-btn')
   
-  if (!nameElement || !emailElement || !composeBtn) {
+  if (!composeBtn) {
     return
   }
-  
-  const name = nameElement.value.trim()
-  const email = emailElement.value.trim()
   
   // questionsPerPage가 설정되어 있는지 확인 (버튼 방식)
   // null(전체)이거나 숫자면 설정된 것으로 간주
   const hasDisplay = questionsPerPage !== undefined
   
-  if (name && email && hasDisplay) {
+  // 로그인 여부 체크 (localStorage에서 세션 토큰 확인)
+  const sessionToken = localStorage.getItem('sessionToken')
+  
+  if (sessionToken && hasDisplay) {
     composeBtn.disabled = false
     composeBtn.classList.remove('opacity-50', 'cursor-not-allowed')
   } else {
@@ -1929,13 +1927,29 @@ function checkComposeButtonState() {
 
 // 진단지 구성하기
 async function composeAssessment() {
-  const name = document.getElementById('exec-name').value.trim()
-  const email = document.getElementById('exec-email').value.trim()
-  const department = document.getElementById('exec-department').value.trim()
-  const level = document.getElementById('exec-level').value
+  // 로그인한 사용자 정보 가져오기
+  const sessionToken = localStorage.getItem('sessionToken')
   
-  if (!name || !email) {
-    alert('이름과 이메일은 필수 입력 항목입니다')
+  if (!sessionToken) {
+    alert('로그인이 필요합니다.')
+    return
+  }
+  
+  // 세션에서 사용자 정보 가져오기
+  let userInfo = null
+  try {
+    const response = await axios.get('/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    })
+    
+    if (response.data.success) {
+      userInfo = response.data.data.user
+    } else {
+      alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.')
+      return
+    }
+  } catch (error) {
+    alert('사용자 정보를 가져올 수 없습니다. 다시 로그인해주세요.')
     return
   }
   
@@ -1944,9 +1958,12 @@ async function composeAssessment() {
     return
   }
   
-  // 응답자 정보 저장
+  // 응답자 정보 저장 (로그인한 사용자 정보 사용)
   currentRespondentInfo = {
-    name, email, department, level
+    name: userInfo.name,
+    email: userInfo.email,
+    department: userInfo.organization || '',
+    level: userInfo.position || ''
   }
   
   // 척도 설정 저장
@@ -2271,19 +2288,17 @@ async function submitAssessment() {
 
 // 진단 시작 버튼 상태 체크
 function checkStartButtonState() {
-  const nameElement = document.getElementById('exec-name')
-  const emailElement = document.getElementById('exec-email')
   const startBtn = document.getElementById('start-assessment-btn')
   
-  if (!nameElement || !emailElement || !startBtn) {
+  if (!startBtn) {
     return // 요소가 없으면 조기 반환
   }
   
-  const name = nameElement.value.trim()
-  const email = emailElement.value.trim()
+  // 로그인 여부 체크
+  const sessionToken = localStorage.getItem('sessionToken')
   const hasDisplay = questionsPerPage !== null
   
-  if (name && email && hasDisplay) {
+  if (sessionToken && hasDisplay) {
     startBtn.disabled = false
     startBtn.classList.remove('opacity-50', 'cursor-not-allowed')
   } else {
@@ -2294,16 +2309,16 @@ function checkStartButtonState() {
 
 // 입력 필드 변경 감지 및 초기화
 document.addEventListener('DOMContentLoaded', () => {
-  const nameInput = document.getElementById('exec-name')
-  const emailInput = document.getElementById('exec-email')
   const displayInput = document.getElementById('display-count')
   
-  if (nameInput) {
-    nameInput.addEventListener('input', checkComposeButtonState)
-  }
-  if (emailInput) {
-    emailInput.addEventListener('input', checkComposeButtonState)
-  }
+  // 로그인 상태 변경 시 버튼 상태 체크
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'sessionToken') {
+      checkComposeButtonState()
+      checkStartButtonState()
+    }
+  })
+  
   if (displayInput) {
     displayInput.addEventListener('change', checkComposeButtonState)
   }
