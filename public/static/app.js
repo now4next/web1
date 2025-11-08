@@ -68,15 +68,8 @@ function scrollToNavigation() {
 
 // 홈으로 이동 (페이지 최상단 + 첫 번째 탭)
 function goToHome() {
-  // 첫 번째 탭으로 이동
-  showTab('assess', document.querySelector('.nav-btn'))
-  
-  // 페이지 최상단으로 스크롤
-  window.scrollTo({ 
-    top: 0, 
-    behavior: 'smooth' 
-  })
-  
+  // 페이지를 완전히 새로고침하여 초기 상태로 이동
+  window.location.href = '/'
   console.log('🏠 Navigated to home')
 }
 
@@ -1129,6 +1122,9 @@ function updateChatUI() {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 페이지 초기 상태 설정
+  initializePage()
+  
   // 기본 탭 활성화
   showTab('assess')
   
@@ -1139,6 +1135,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })
 })
+
+// 페이지 초기화 함수
+function initializePage() {
+  // 분석 리포트 숨기기
+  const reportDiv = document.getElementById('analysis-report')
+  if (reportDiv) {
+    reportDiv.classList.add('hidden')
+    reportDiv.innerHTML = ''
+  }
+  
+  // 진단 프리뷰 숨기기
+  const previewDiv = document.getElementById('assessment-preview')
+  if (previewDiv) {
+    previewDiv.classList.add('hidden')
+  }
+  
+  // AI 인사이트 초기화
+  const insightsDiv = document.getElementById('ai-insights')
+  if (insightsDiv) {
+    insightsDiv.innerHTML = ''
+  }
+  
+  console.log('✅ Page initialized')
+}
 
 // ============================================================================
 // Phase 2: 분석 및 인사이트

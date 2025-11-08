@@ -2429,7 +2429,9 @@ app.get('/', (c) => {
                 }
                 
                 clearSessionToken();
-                updateUIForLoggedOutUser();
+                
+                // 페이지를 완전히 새로고침하여 모든 상태 초기화 및 메인 페이지로 이동
+                window.location.href = '/';
             }
             
             // ==================== 프로필 관련 함수 ====================
