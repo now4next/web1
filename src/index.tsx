@@ -1198,6 +1198,74 @@ app.get('/api/my-assessments', async (c) => {
   })
 })
 
+// 진단 결과 삭제 (본인 결과만 삭제 가능)
+app.delete('/api/assessments/:respondentId', async (c) => {
+  const db = c.env.DB
+  const authHeader = c.req.header('Authorization')
+  const respondentId = c.req.param('respondentId')
+  
+  if (!authHeader) {
+    return c.json({ success: false, error: '인증이 필요합니다' }, 401)
+  }
+  
+  const sessionToken = authHeader.replace('Bearer ', '')
+  
+  // 세션 확인
+  const session = await db.prepare(`
+    SELECT user_id FROM user_sessions 
+    WHERE session_token = ? AND datetime(expires_at) > datetime('now')
+  `).bind(sessionToken).first()
+  
+  if (!session) {
+    return c.json({ success: false, error: '유효하지 않은 세션입니다' }, 401)
+  }
+  
+  // 사용자 정보
+  const user = await db.prepare(`
+    SELECT * FROM users WHERE id = ?
+  `).bind(session.user_id).first()
+  
+  if (!user) {
+    return c.json({ success: false, error: '사용자를 찾을 수 없습니다' }, 404)
+  }
+  
+  // 응답자 정보 확인 (본인 것인지 체크)
+  const respondent = await db.prepare(`
+    SELECT * FROM respondents WHERE id = ?
+  `).bind(respondentId).first()
+  
+  if (!respondent) {
+    return c.json({ success: false, error: '진단 결과를 찾을 수 없습니다' }, 404)
+  }
+  
+  // 본인의 진단 결과인지 확인
+  if (respondent.email !== user.email) {
+    return c.json({ success: false, error: '본인의 진단 결과만 삭제할 수 있습니다' }, 403)
+  }
+  
+  try {
+    // 트랜잭션: 응답자의 모든 관련 데이터 삭제
+    
+    // 1. 응답 데이터 삭제
+    await db.prepare(`
+      DELETE FROM assessment_responses WHERE respondent_id = ?
+    `).bind(respondentId).run()
+    
+    // 2. 응답자 삭제
+    await db.prepare(`
+      DELETE FROM respondents WHERE id = ?
+    `).bind(respondentId).run()
+    
+    return c.json({ 
+      success: true,
+      message: '진단 결과가 삭제되었습니다'
+    })
+  } catch (error: any) {
+    console.error('Delete assessment error:', error)
+    return c.json({ success: false, error: '삭제 중 오류가 발생했습니다' }, 500)
+  }
+})
+
 // 응답자별 결과 분석
 app.get('/api/analysis/:respondentId', async (c) => {
   const db = c.env.DB

@@ -1215,10 +1215,9 @@ async function loadMyAssessments() {
         }
         
         return `
-          <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
-               onclick="loadAnalysis(${assessment.respondent_id})">
+          <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow hover:border-green-300">
             <div class="flex items-start justify-between mb-3">
-              <div class="flex-1">
+              <div class="flex-1 cursor-pointer" onclick="loadAnalysis(${assessment.respondent_id})">
                 <h4 class="font-semibold text-gray-800 text-lg mb-2">${title}</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
                   <span class="${typeColorClass} px-3 py-1 rounded-full text-xs font-medium">
@@ -1238,9 +1237,14 @@ async function loadMyAssessments() {
                   <div><i class="fas fa-tasks mr-2 text-gray-400"></i>응답 문항: ${assessment.response_count || 0}개</div>
                 </div>
               </div>
-              <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                <i class="fas fa-chart-line mr-2"></i>결과 보기
-              </button>
+              <div class="flex flex-col gap-2">
+                <button onclick="loadAnalysis(${assessment.respondent_id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                  <i class="fas fa-chart-line mr-2"></i>결과 보기
+                </button>
+                <button onclick="event.stopPropagation(); deleteAssessment(${assessment.respondent_id})" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                  <i class="fas fa-trash-alt mr-2"></i>삭제
+                </button>
+              </div>
             </div>
           </div>
         `
@@ -1268,6 +1272,41 @@ async function loadMyAssessments() {
       </div>
     `
     countBadge.textContent = '0'
+  }
+}
+
+// 진단 결과 삭제
+async function deleteAssessment(respondentId) {
+  if (!confirm('정말로 이 진단 결과를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
+    return
+  }
+  
+  const sessionToken = localStorage.getItem('sessionToken')
+  
+  if (!sessionToken) {
+    alert('로그인이 필요합니다.')
+    return
+  }
+  
+  try {
+    const response = await axios.delete(`/api/assessments/${respondentId}`, {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    })
+    
+    if (response.data.success) {
+      alert('진단 결과가 삭제되었습니다.')
+      // 목록 새로고침
+      await loadMyAssessments()
+    } else {
+      alert('삭제 실패: ' + (response.data.error || '알 수 없는 오류'))
+    }
+  } catch (error) {
+    console.error('❌ Delete assessment error:', error)
+    if (error.response?.status === 403) {
+      alert('본인의 진단 결과만 삭제할 수 있습니다.')
+    } else {
+      alert('삭제 중 오류가 발생했습니다: ' + (error.response?.data?.error || error.message))
+    }
   }
 }
 
