@@ -1369,7 +1369,8 @@ async function loadAnalysis(respondentId) {
           })
         })
         
-        // AI 인사이트는 버튼 클릭 시 생성 (자동 호출 제거)
+        // AI 인사이트 자동 로드 (저장된 것이 있으면 표시, 없으면 생성 버튼 표시)
+        await checkAndLoadInsights(respondentId)
       } catch (renderError) {
         console.error('❌ Error rendering analysis report:', renderError)
         reportDiv.innerHTML = `
@@ -1746,7 +1747,7 @@ async function checkAndLoadInsights(respondentId) {
     
     if (response.data.success && response.data.insights) {
       // 저장된 인사이트가 있으면 표시
-      displayInsights(response.data.insights, respondentId, response.data.cached)
+      displayInsights(response.data.insights, respondentId, false, response.data.cached)
     } else {
       // 저장된 인사이트가 없으면 생성 버튼 표시
       showGenerateButton(respondentId)
