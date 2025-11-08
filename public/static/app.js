@@ -1241,7 +1241,7 @@ async function loadMyAssessments() {
                 <button onclick="loadAnalysis(${assessment.respondent_id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                   <i class="fas fa-chart-line mr-2"></i>결과 보기
                 </button>
-                <button onclick="event.stopPropagation(); deleteAssessment(${assessment.respondent_id})" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                <button onclick="event.stopPropagation(); deleteAssessment(${assessment.session_id})" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm">
                   <i class="fas fa-trash-alt mr-2"></i>삭제
                 </button>
               </div>
@@ -1275,8 +1275,8 @@ async function loadMyAssessments() {
   }
 }
 
-// 진단 결과 삭제
-async function deleteAssessment(respondentId) {
+// 진단 결과 삭제 (개별 진단 세션만 삭제)
+async function deleteAssessment(sessionId) {
   if (!confirm('정말로 이 진단 결과를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
     return
   }
@@ -1289,7 +1289,7 @@ async function deleteAssessment(respondentId) {
   }
   
   try {
-    const response = await axios.delete(`/api/assessments/${respondentId}`, {
+    const response = await axios.delete(`/api/assessments/session/${sessionId}`, {
       headers: { 'Authorization': 'Bearer ' + sessionToken }
     })
     
