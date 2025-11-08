@@ -2449,6 +2449,26 @@ async function submitAssessment() {
   
   if (!confirm('진단을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.')) return
   
+  // 로딩 오버레이 표시
+  const loadingOverlay = document.createElement('div')
+  loadingOverlay.id = 'submit-loading-overlay'
+  loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'
+  loadingOverlay.innerHTML = `
+    <div class="bg-white rounded-lg shadow-xl p-8 max-w-md mx-4">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin text-5xl text-blue-600 mb-4"></i>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">진단 결과를 저장하고 있습니다</h3>
+        <p class="text-gray-600">잠시만 기다려주세요...</p>
+        <div class="mt-4 flex items-center justify-center space-x-2">
+          <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+          <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+          <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+        </div>
+      </div>
+    </div>
+  `
+  document.body.appendChild(loadingOverlay)
+  
   try {
     // 디버깅: 제출할 역량 키워드 확인
     const competenciesToSubmit = assessmentQuestions.map(q => q.competency)
@@ -2477,6 +2497,10 @@ async function submitAssessment() {
     
     const result = await response.json()
     console.log('Submit result:', result)
+    
+    // 로딩 오버레이 제거
+    const overlay = document.getElementById('submit-loading-overlay')
+    if (overlay) overlay.remove()
     
     if (result.success) {
       alert(`진단이 성공적으로 제출되었습니다!\n\n✓ 제출 완료: ${result.saved_count}개 문항\n✓ 세션 ID: ${result.session_id}\n✓ 응답자 ID: ${result.respondent_id}`)
@@ -2508,6 +2532,10 @@ async function submitAssessment() {
       throw new Error(result.error || '제출 실패')
     }
   } catch (error) {
+    // 로딩 오버레이 제거 (오류 발생 시에도)
+    const overlay = document.getElementById('submit-loading-overlay')
+    if (overlay) overlay.remove()
+    
     console.error('제출 오류:', error)
     alert('제출 중 오류가 발생했습니다: ' + error.message + '\n\n브라우저 Console(F12)을 열어 상세 정보를 확인하세요.')
   }
