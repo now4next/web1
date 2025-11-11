@@ -887,6 +887,14 @@ const assistantProfiles = {
 
 // 어시스턴트 선택
 async function selectAssistant(type) {
+  // 로그인 상태 확인
+  const sessionToken = localStorage.getItem('sessionToken')
+  if (!sessionToken) {
+    alert('로그인이 필요한 기능입니다.')
+    showLoginModal()
+    return
+  }
+  
   currentAssistant = type
   const profile = assistantProfiles[type]
   
@@ -905,7 +913,17 @@ async function selectAssistant(type) {
   
   // 저장된 대화 내용 로드 시도
   try {
-    const response = await axios.get(`/api/ai/coaching-history/${type}`)
+    const response = await axios.get(`/api/ai/coaching-history/${type}`, {
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`
+      }
+    })
+    
+    if (response.data.needsLogin) {
+      alert('세션이 만료되었습니다. 다시 로그인해주세요.')
+      logout()
+      return
+    }
     
     if (response.data.success && response.data.messages && response.data.messages.length > 0) {
       // 저장된 대화가 있으면 로드
@@ -1067,6 +1085,12 @@ function hideTypingIndicator() {
 async function saveChatHistory() {
   if (!currentAssistant || chatMessages.length === 0) return
   
+  const sessionToken = localStorage.getItem('sessionToken')
+  if (!sessionToken) {
+    console.warn('로그인이 필요합니다. 대화 내용을 저장할 수 없습니다.')
+    return
+  }
+  
   try {
     // 인사말 제외하고 저장
     const messagesToSave = chatMessages.filter(m => !m.isGreeting)
@@ -1075,13 +1099,19 @@ async function saveChatHistory() {
     
     await axios.post('/api/ai/coaching-save', {
       assistantType: currentAssistant,
-      messages: chatMessages, // 모든 메시지 저장 (인사말 포함)
-      respondentId: 1 // 현재는 기본값, 추후 실제 respondent_id 사용
+      messages: chatMessages // 모든 메시지 저장 (인사말 포함)
+    }, {
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`
+      }
     })
     
     console.log('✅ Chat history saved')
   } catch (error) {
     console.error('Error saving chat history:', error)
+    if (error.response?.status === 401) {
+      console.warn('세션이 만료되었습니다.')
+    }
     // 저장 실패해도 사용자 경험에 영향 없음
   }
 }

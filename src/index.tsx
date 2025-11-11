@@ -1568,7 +1568,7 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
   return c.json({ success: true, insights, demo: isDemo })
 })
 
-// 저장된 대화 내용 조회 API
+// 저장된 대화 내용 조회 API (로그인 필요)
 app.get('/api/ai/coaching-history/:assistantType', async (c) => {
   try {
     const db = c.env.DB
@@ -1576,20 +1576,41 @@ app.get('/api/ai/coaching-history/:assistantType', async (c) => {
       return c.json({ success: true, messages: [] })
     }
     
+    // 세션 토큰 확인
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ success: true, messages: [], needsLogin: true })
+    }
+    
+    const sessionToken = authHeader.substring(7)
+    
+    // 세션 유효성 확인 및 사용자 ID 조회
+    const sessionResult = await db.prepare(`
+      SELECT us.user_id, u.id, u.name, u.email
+      FROM user_sessions us
+      JOIN users u ON us.user_id = u.id
+      WHERE us.session_token = ? AND us.expires_at > datetime('now') AND u.status = 'active'
+    `).bind(sessionToken).first()
+    
+    if (!sessionResult) {
+      return c.json({ success: true, messages: [], needsLogin: true })
+    }
+    
+    const userId = sessionResult.user_id as number
     const assistantType = c.req.param('assistantType')
     
-    // coaching_sessions 테이블에서 해당 어시스턴트 타입의 최근 대화 조회
+    // coaching_sessions 테이블에서 해당 사용자와 어시스턴트 타입의 최근 대화 조회
     const { results } = await db.prepare(`
       SELECT session_data, updated_at FROM coaching_sessions 
-      WHERE session_data LIKE ?
+      WHERE user_id = ? AND assistant_type = ?
       ORDER BY updated_at DESC
       LIMIT 1
-    `).bind(`%"assistantType":"${assistantType}"%`).all()
+    `).bind(userId, assistantType).all()
     
     if (results && results.length > 0 && results[0].session_data) {
       try {
         const sessionData = JSON.parse(results[0].session_data as string)
-        if (sessionData.assistantType === assistantType && sessionData.messages) {
+        if (sessionData.messages) {
           return c.json({ 
             success: true, 
             messages: sessionData.messages,
@@ -1608,7 +1629,7 @@ app.get('/api/ai/coaching-history/:assistantType', async (c) => {
   }
 })
 
-// 대화 내용 저장 API
+// 대화 내용 저장 API (로그인 필요)
 app.post('/api/ai/coaching-save', async (c) => {
   try {
     const db = c.env.DB
@@ -1616,24 +1637,58 @@ app.post('/api/ai/coaching-save', async (c) => {
       return c.json({ success: true, message: 'Database not configured' })
     }
     
+    // 세션 토큰 확인
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ success: false, error: '로그인이 필요합니다' }, 401)
+    }
+    
+    const sessionToken = authHeader.substring(7)
+    
+    // 세션 유효성 확인 및 사용자 ID 조회
+    const sessionResult = await db.prepare(`
+      SELECT us.user_id, u.id, u.name, u.email
+      FROM user_sessions us
+      JOIN users u ON us.user_id = u.id
+      WHERE us.session_token = ? AND us.expires_at > datetime('now') AND u.status = 'active'
+    `).bind(sessionToken).first()
+    
+    if (!sessionResult) {
+      return c.json({ success: false, error: '세션이 만료되었습니다' }, 401)
+    }
+    
+    const userId = sessionResult.user_id as number
     const body = await c.req.json()
-    const { assistantType, messages, respondentId } = body
+    const { assistantType, messages } = body
     
     const sessionData = JSON.stringify({
-      assistantType,
       messages,
       savedAt: new Date().toISOString()
     })
     
-    // coaching_sessions 테이블에 저장
-    await db.prepare(`
-      INSERT INTO coaching_sessions 
-      (respondent_id, session_data, created_at, updated_at)
-      VALUES (?, ?, datetime('now'), datetime('now'))
-    `).bind(
-      respondentId || 1,
-      sessionData
-    ).run()
+    // 기존 대화가 있는지 확인
+    const existingSession = await db.prepare(`
+      SELECT id FROM coaching_sessions 
+      WHERE user_id = ? AND assistant_type = ?
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).bind(userId, assistantType).first()
+    
+    if (existingSession) {
+      // 기존 대화 업데이트
+      await db.prepare(`
+        UPDATE coaching_sessions 
+        SET session_data = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(sessionData, existingSession.id).run()
+    } else {
+      // 새 대화 생성
+      await db.prepare(`
+        INSERT INTO coaching_sessions 
+        (user_id, assistant_type, session_data, created_at, updated_at)
+        VALUES (?, ?, ?, datetime('now'), datetime('now'))
+      `).bind(userId, assistantType, sessionData).run()
+    }
     
     return c.json({ success: true })
   } catch (error) {
