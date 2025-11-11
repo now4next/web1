@@ -2041,21 +2041,54 @@ app.get('/', (c) => {
                 <div class="mt-6 mb-6">
                     <button 
                         onclick="showTab('action', document.querySelectorAll('.nav-btn')[2])"
-                        class="w-full relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group">
-                        <img 
-                            src="/static/ai-coaching-banner.png" 
-                            alt="AI 실행 지원 - 맞춤형 AI 컨설팅/코칭/멘토링/튜터링" 
-                            class="w-full h-auto object-cover"
-                        />
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-black/10 group-hover:to-black/20 transition-all duration-300"></div>
-                        <div class="absolute inset-0 flex items-center justify-end pr-8">
-                            <div class="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-lg shadow-lg group-hover:bg-white transition-all duration-300">
-                                <span class="text-orange-600 font-bold text-lg flex items-center">
-                                    AI 실행 지원 시작하기
-                                    <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform duration-300"></i>
-                                </span>
+                        class="w-full relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.01] group bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-8">
+                        <!-- 배경 패턴 -->
+                        <div class="absolute inset-0 opacity-10">
+                            <div class="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                            <div class="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
+                        </div>
+                        
+                        <!-- 컨텐츠 -->
+                        <div class="relative z-10 flex items-center justify-between">
+                            <div class="flex items-center space-x-6">
+                                <!-- 아이콘 그룹 -->
+                                <div class="flex space-x-3">
+                                    <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                        <i class="fas fa-briefcase text-white text-2xl"></i>
+                                    </div>
+                                    <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300" style="transition-delay: 50ms">
+                                        <i class="fas fa-user-tie text-white text-2xl"></i>
+                                    </div>
+                                    <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300" style="transition-delay: 100ms">
+                                        <i class="fas fa-chalkboard-teacher text-white text-2xl"></i>
+                                    </div>
+                                    <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300" style="transition-delay: 150ms">
+                                        <i class="fas fa-graduation-cap text-white text-2xl"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- 텍스트 -->
+                                <div class="text-left">
+                                    <h3 class="text-3xl font-bold text-white mb-2 group-hover:translate-x-2 transition-transform duration-300">
+                                        AI 코칭/컨설팅 받기
+                                    </h3>
+                                    <p class="text-white/90 text-lg">
+                                        전문 AI 어시스턴트가 맞춤형 코칭과 컨설팅을 제공합니다
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- 화살표 버튼 -->
+                            <div class="flex items-center space-x-3">
+                                <span class="text-white font-semibold text-lg hidden md:block">시작하기</span>
+                                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center group-hover:translate-x-2 transition-transform duration-300 shadow-lg">
+                                    <i class="fas fa-arrow-right text-orange-500 text-xl"></i>
+                                </div>
                             </div>
                         </div>
+                        
+                        <!-- 빛나는 효과 -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
                     </button>
                 </div>
                 
