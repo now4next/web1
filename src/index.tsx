@@ -2098,61 +2098,126 @@ app.get('/', (c) => {
 
             <!-- ACTION Tab -->
             <div id="tab-action" class="tab-content hidden">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
-                        <i class="fas fa-rocket text-orange-600 mr-2"></i>
-                        실행 지원
-                    </h2>
-                    
-                    <!-- AI 어시스턴트 선택 -->
-                    <div id="assistant-selection" class="mb-6">
-                        <p class="text-gray-600 mb-4">원하시는 AI 어시스턴트를 선택하여 대화를 시작하세요</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <!-- AI 컨설팅 -->
-                            <button onclick="selectAssistant('consulting')" class="assistant-card group p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                                <div class="text-center">
-                                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                        <i class="fas fa-briefcase text-white text-2xl"></i>
-                                    </div>
-                                    <h3 class="font-bold text-gray-800 mb-2">AI 컨설팅</h3>
-                                    <p class="text-sm text-gray-600">전략적 관점에서 조직 역량 개발 방향 제시</p>
-                                </div>
-                            </button>
-                            
-                            <!-- AI 코칭 -->
-                            <button onclick="selectAssistant('coaching')" class="assistant-card group p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                                <div class="text-center">
-                                    <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                        <i class="fas fa-comments text-white text-2xl"></i>
-                                    </div>
-                                    <h3 class="font-bold text-gray-800 mb-2">AI 코칭</h3>
-                                    <p class="text-sm text-gray-600">질문과 대화를 통한 자기주도적 역량 개발</p>
-                                </div>
-                            </button>
-                            
-                            <!-- AI 멘토링 -->
-                            <button onclick="selectAssistant('mentoring')" class="assistant-card group p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                                <div class="text-center">
-                                    <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                        <i class="fas fa-user-tie text-white text-2xl"></i>
-                                    </div>
-                                    <h3 class="font-bold text-gray-800 mb-2">AI 멘토링</h3>
-                                    <p class="text-sm text-gray-600">경험 공유와 실무 조언으로 성장 가속화</p>
-                                </div>
-                            </button>
-                            
-                            <!-- AI 티칭 -->
-                            <button onclick="selectAssistant('teaching')" class="assistant-card group p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105">
-                                <div class="text-center">
-                                    <div class="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                        <i class="fas fa-chalkboard-teacher text-white text-2xl"></i>
-                                    </div>
-                                    <h3 class="font-bold text-gray-800 mb-2">AI 티칭</h3>
-                                    <p class="text-sm text-gray-600">체계적인 학습과 실습으로 역량 강화</p>
-                                </div>
-                            </button>
+                <!-- 헤더 섹션 -->
+                <div class="mb-8">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-rocket text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold text-gray-900">AI 실행 지원</h2>
+                            <p class="text-gray-500 text-sm">전문 AI 어시스턴트가 당신의 성장을 지원합니다</p>
                         </div>
                     </div>
+                </div>
+                
+                <!-- AI 어시스턴트 선택 -->
+                <div id="assistant-selection">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- AI 컨설팅 -->
+                        <button onclick="selectAssistant('consulting')" class="assistant-card group relative overflow-hidden bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                            <!-- 배경 그라데이션 -->
+                            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            
+                            <!-- 컨텐츠 -->
+                            <div class="relative p-8">
+                                <!-- 아이콘 -->
+                                <div class="mb-6 relative">
+                                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                        <i class="fas fa-briefcase text-white text-3xl"></i>
+                                    </div>
+                                    <!-- 데코레이션 -->
+                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                </div>
+                                
+                                <!-- 텍스트 -->
+                                <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-300">AI 컨설팅</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed mb-4">전략적 관점에서 조직 역량 개발 방향을 제시합니다</p>
+                                
+                                <!-- 화살표 -->
+                                <div class="flex items-center text-blue-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                    <span>시작하기</span>
+                                    <i class="fas fa-arrow-right ml-2"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- 상단 테두리 효과 -->
+                            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                        </button>
+                        
+                        <!-- AI 코칭 -->
+                        <button onclick="selectAssistant('coaching')" class="assistant-card group relative overflow-hidden bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                            <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            
+                            <div class="relative p-8">
+                                <div class="mb-6 relative">
+                                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                        <i class="fas fa-user-tie text-white text-3xl"></i>
+                                    </div>
+                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-green-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                </div>
+                                
+                                <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-green-600 transition-colors duration-300">AI 코칭</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed mb-4">질문과 대화를 통해 자기주도적 역량 개발을 지원합니다</p>
+                                
+                                <div class="flex items-center text-green-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                    <span>시작하기</span>
+                                    <i class="fas fa-arrow-right ml-2"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-green-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                        </button>
+                        
+                        <!-- AI 멘토링 -->
+                        <button onclick="selectAssistant('mentoring')" class="assistant-card group relative overflow-hidden bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                            <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            
+                            <div class="relative p-8">
+                                <div class="mb-6 relative">
+                                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                        <i class="fas fa-chalkboard-teacher text-white text-3xl"></i>
+                                    </div>
+                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-purple-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                </div>
+                                
+                                <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors duration-300">AI 멘토링</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed mb-4">경험 공유와 실무 조언으로 성장을 가속화합니다</p>
+                                
+                                <div class="flex items-center text-purple-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                    <span>시작하기</span>
+                                    <i class="fas fa-arrow-right ml-2"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                        </button>
+                        
+                        <!-- AI 튜터링 -->
+                        <button onclick="selectAssistant('teaching')" class="assistant-card group relative overflow-hidden bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+                            <div class="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-orange-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            
+                            <div class="relative p-8">
+                                <div class="mb-6 relative">
+                                    <div class="w-20 h-20 mx-auto bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                        <i class="fas fa-graduation-cap text-white text-3xl"></i>
+                                    </div>
+                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-orange-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                </div>
+                                
+                                <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors duration-300">AI 튜터링</h3>
+                                <p class="text-sm text-gray-600 leading-relaxed mb-4">체계적인 학습과 실습으로 역량을 강화합니다</p>
+                                
+                                <div class="flex items-center text-orange-600 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                    <span>시작하기</span>
+                                    <i class="fas fa-arrow-right ml-2"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                        </button>
+                    </div>
+                </div>
                     
                     <!-- 대화 영역 (초기 숨김) -->
                     <div id="chat-area" class="hidden">
