@@ -2153,21 +2153,21 @@ app.get('/', (c) => {
 
             <!-- ACTION Tab -->
             <div id="tab-action" class="tab-content hidden">
-                <!-- 헤더 섹션 -->
-                <div class="mb-8">
-                    <div class="flex items-center space-x-3 mb-3">
-                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-rocket text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-3xl font-bold text-gray-900">AI 실행 지원</h2>
-                            <p class="text-gray-500 text-sm">전문 AI 어시스턴트가 당신의 성장을 지원합니다</p>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- AI 어시스턴트 선택 -->
                 <div id="assistant-selection">
+                    <!-- 헤더 섹션 -->
+                    <div class="mb-8">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                                <i class="fas fa-rocket text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-3xl font-bold text-gray-900">AI 실행 지원</h2>
+                                <p class="text-gray-500 text-sm">전문 AI 어시스턴트가 당신의 성장을 지원합니다</p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <!-- AI 컨설팅 -->
                         <button onclick="selectAssistant('consulting')" class="assistant-card group relative overflow-hidden bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
@@ -2273,8 +2273,8 @@ app.get('/', (c) => {
                         </button>
                     </div>
                 </div>
-                    
-                    <!-- 대화 영역 (초기 숨김) -->
+                
+                <!-- 대화 영역 (초기 숨김) -->
                     <div id="chat-area" class="hidden">
                         <!-- 선택된 어시스턴트 헤더 -->
                         <div id="assistant-header" class="relative overflow-hidden bg-white rounded-t-2xl shadow-md border-b-2 border-blue-100">
