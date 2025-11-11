@@ -2037,6 +2037,28 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 
+                <!-- AI 코칭/컨설팅 받기 배너 -->
+                <div class="mt-6 mb-6">
+                    <button 
+                        onclick="showTab('action', document.querySelectorAll('.nav-btn')[2])"
+                        class="w-full relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group">
+                        <img 
+                            src="/static/ai-coaching-banner.png" 
+                            alt="AI 실행 지원 - 맞춤형 AI 컨설팅/코칭/멘토링/튜터링" 
+                            class="w-full h-auto object-cover"
+                        />
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-black/10 group-hover:to-black/20 transition-all duration-300"></div>
+                        <div class="absolute inset-0 flex items-center justify-end pr-8">
+                            <div class="bg-white/90 backdrop-blur-sm px-6 py-3 rounded-lg shadow-lg group-hover:bg-white transition-all duration-300">
+                                <span class="text-orange-600 font-bold text-lg flex items-center">
+                                    AI 실행 지원 시작하기
+                                    <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform duration-300"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+                
                 <!-- 결과 리포트 영역 (초기 숨김) -->
                 <div id="analysis-report" class="hidden mt-6"></div>
             </div>
