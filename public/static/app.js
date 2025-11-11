@@ -1019,23 +1019,43 @@ function showTypingIndicator() {
   
   const indicator = document.createElement('div')
   indicator.id = 'typing-indicator'
-  indicator.className = 'flex justify-start mb-4'
+  indicator.className = 'flex justify-start mb-6 animate-fadeIn'
   indicator.innerHTML = `
-    <div class="flex items-start gap-3 max-w-[70%]">
-      <div class="w-10 h-10 ${profile.bgColor} rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-        <i class="fas ${profile.icon} text-white"></i>
+    <div class="flex items-start gap-3 max-w-[75%]">
+      <!-- 아바타 -->
+      <div class="relative flex-shrink-0">
+        <div class="w-11 h-11 ${profile.bgColor} rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+          <i class="fas ${profile.icon} text-white text-lg"></i>
+        </div>
+        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
       </div>
-      <div class="bg-white rounded-2xl rounded-tl-sm px-6 py-4 shadow-md">
-        <div class="flex gap-1">
-          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-          <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+      
+      <!-- 타이핑 버블 -->
+      <div class="flex flex-col">
+        <div class="relative">
+          <div class="bg-white rounded-2xl rounded-tl-md px-5 py-3.5 shadow-md border border-gray-100">
+            <div class="flex gap-1.5 items-center">
+              <div class="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-bounce" style="animation-delay: 0s; animation-duration: 0.6s"></div>
+              <div class="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s; animation-duration: 0.6s"></div>
+              <div class="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-bounce" style="animation-delay: 0.4s; animation-duration: 0.6s"></div>
+            </div>
+          </div>
+          <!-- 메시지 꼬리 -->
+          <div class="absolute -top-0 -left-0 w-4 h-4 bg-white border-l border-t border-gray-100 transform rotate-45 -translate-x-2 -translate-y-2"></div>
+        </div>
+        <div class="flex items-center gap-2 mt-2 ml-2 text-xs text-gray-400">
+          <span class="font-medium text-gray-500">${profile.name}</span>
+          <span class="text-gray-300">•</span>
+          <span>입력 중...</span>
         </div>
       </div>
     </div>
   `
   container.appendChild(indicator)
-  container.scrollTop = container.scrollHeight
+  container.scrollTo({
+    top: container.scrollHeight,
+    behavior: 'smooth'
+  })
 }
 
 function hideTypingIndicator() {
@@ -1073,8 +1093,14 @@ function updateChatUI() {
   
   if (chatMessages.length === 0) {
     container.innerHTML = `
-      <div class="text-gray-500 text-sm text-center py-8">
-        대화를 시작하세요
+      <div class="relative text-center py-12">
+        <div class="inline-block">
+          <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
+            <i class="fas fa-comments text-white text-2xl"></i>
+          </div>
+          <h4 class="text-lg font-bold text-gray-800 mb-2">대화를 시작하세요</h4>
+          <p class="text-sm text-gray-500">궁금한 점을 자유롭게 질문해주세요</p>
+        </div>
       </div>
     `
     return
@@ -1085,27 +1111,48 @@ function updateChatUI() {
     
     if (msg.role === 'user') {
       return `
-        <div class="flex justify-end mb-4 animate-fadeIn">
-          <div class="flex flex-col items-end max-w-[70%]">
-            <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl rounded-tr-sm px-6 py-3 shadow-lg">
-              <div class="whitespace-pre-line leading-relaxed">${msg.content}</div>
+        <div class="flex justify-end mb-6 animate-fadeIn" style="animation-delay: ${idx * 0.1}s">
+          <div class="flex flex-col items-end max-w-[75%]">
+            <div class="group relative">
+              <div class="bg-gradient-to-br from-blue-600 via-blue-500 to-blue-600 text-white rounded-2xl rounded-tr-md px-5 py-3.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+                <div class="whitespace-pre-line leading-relaxed text-[15px]">${msg.content}</div>
+              </div>
+              <!-- 메시지 꼬리 -->
+              <div class="absolute -top-0 -right-0 w-4 h-4 bg-blue-600 transform rotate-45 translate-x-2 -translate-y-2"></div>
             </div>
-            <span class="text-xs text-gray-400 mt-1">${timestamp}</span>
+            <div class="flex items-center gap-1.5 mt-2 text-xs text-gray-400">
+              <span>${timestamp}</span>
+              <i class="fas fa-check-double text-blue-500"></i>
+            </div>
           </div>
         </div>
       `
     } else {
       return `
-        <div class="flex justify-start mb-4 animate-fadeIn">
-          <div class="flex items-start gap-3 max-w-[70%]">
-            <div class="w-10 h-10 ${profile.bgColor} rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-              <i class="fas ${profile.icon} text-white"></i>
-            </div>
-            <div class="flex flex-col">
-              <div class="bg-white rounded-2xl rounded-tl-sm px-6 py-4 shadow-md ${msg.isError ? 'border-2 border-red-300' : ''}">
-                <div class="whitespace-pre-line leading-relaxed text-gray-800">${msg.content}</div>
+        <div class="flex justify-start mb-6 animate-fadeIn" style="animation-delay: ${idx * 0.1}s">
+          <div class="flex items-start gap-3 max-w-[75%]">
+            <!-- 아바타 -->
+            <div class="relative flex-shrink-0">
+              <div class="w-11 h-11 ${profile.bgColor} rounded-2xl flex items-center justify-center shadow-lg transform transition-transform duration-300 hover:scale-110 hover:rotate-3">
+                <i class="fas ${profile.icon} text-white text-lg"></i>
               </div>
-              <span class="text-xs text-gray-400 mt-1 ml-2">${profile.name} · ${timestamp}</span>
+              <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white"></div>
+            </div>
+            
+            <!-- 메시지 내용 -->
+            <div class="flex flex-col">
+              <div class="group relative">
+                <div class="bg-white rounded-2xl rounded-tl-md px-5 py-3.5 shadow-md hover:shadow-lg transition-all duration-300 ${msg.isError ? 'border-2 border-red-300 bg-red-50' : 'border border-gray-100'}">
+                  <div class="whitespace-pre-line leading-relaxed text-gray-800 text-[15px]">${msg.content}</div>
+                </div>
+                <!-- 메시지 꼬리 -->
+                <div class="absolute -top-0 -left-0 w-4 h-4 bg-white border-l border-t border-gray-100 transform rotate-45 -translate-x-2 -translate-y-2 ${msg.isError ? 'border-red-300 bg-red-50' : ''}"></div>
+              </div>
+              <div class="flex items-center gap-2 mt-2 ml-2 text-xs text-gray-400">
+                <span class="font-medium text-gray-500">${profile.name}</span>
+                <span class="text-gray-300">•</span>
+                <span>${timestamp}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1113,8 +1160,11 @@ function updateChatUI() {
     }
   }).join('')
   
-  // 스크롤을 최하단으로
-  container.scrollTop = container.scrollHeight
+  // 스크롤을 최하단으로 부드럽게
+  container.scrollTo({
+    top: container.scrollHeight,
+    behavior: 'smooth'
+  })
 }
 
 // ============================================================================

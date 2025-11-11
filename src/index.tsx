@@ -2222,41 +2222,94 @@ app.get('/', (c) => {
                     <!-- 대화 영역 (초기 숨김) -->
                     <div id="chat-area" class="hidden">
                         <!-- 선택된 어시스턴트 헤더 -->
-                        <div id="assistant-header" class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl p-4 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div id="assistant-avatar" class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                                    <i class="fas fa-robot text-blue-600 text-xl"></i>
+                        <div id="assistant-header" class="relative overflow-hidden bg-white rounded-t-2xl shadow-md border-b-2 border-blue-100">
+                            <!-- 그라디언트 배경 -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 opacity-90"></div>
+                            
+                            <div class="relative p-5 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <!-- 아바타 -->
+                                    <div class="relative">
+                                        <div id="assistant-avatar" class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg transform transition-transform duration-300 hover:scale-105 hover:rotate-3">
+                                            <i class="fas fa-robot text-blue-600 text-2xl"></i>
+                                        </div>
+                                        <!-- 온라인 상태 표시 -->
+                                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+                                    </div>
+                                    
+                                    <!-- 어시스턴트 정보 -->
+                                    <div>
+                                        <h3 id="assistant-name" class="font-bold text-white text-xl mb-0.5 tracking-tight">AI 어시스턴트</h3>
+                                        <div class="flex items-center gap-2">
+                                            <div id="assistant-status" class="text-blue-50 text-sm font-medium">온라인</div>
+                                            <span class="text-blue-200 text-xs">•</span>
+                                            <span class="text-blue-50 text-xs">실시간 응답</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 id="assistant-name" class="font-bold text-white text-lg">AI 어시스턴트</h3>
-                                    <p id="assistant-status" class="text-blue-100 text-sm">온라인</p>
-                                </div>
+                                
+                                <!-- 닫기 버튼 -->
+                                <button onclick="resetAssistant()" class="group flex items-center gap-2 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5 transition-all duration-300 hover:scale-105">
+                                    <i class="fas fa-arrow-left text-sm"></i>
+                                    <span class="font-medium text-sm">다른 어시스턴트 선택</span>
+                                </button>
                             </div>
-                            <button onclick="resetAssistant()" class="text-white hover:bg-white/20 rounded-lg px-3 py-2 transition-colors">
-                                <i class="fas fa-times mr-1"></i>다른 어시스턴트 선택
-                            </button>
+                            
+                            <!-- 하단 장식 라인 -->
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
                         </div>
                         
                         <!-- 채팅 컨테이너 -->
-                        <div id="chat-container" class="border-x border-gray-300 p-6 h-[500px] overflow-y-auto bg-gray-50">
-                            <div class="text-gray-500 text-sm text-center py-8">
-                                대화를 시작하세요
+                        <div id="chat-container" class="relative bg-gradient-to-b from-gray-50 to-white p-6 h-[500px] overflow-y-auto shadow-inner">
+                            <!-- 배경 패턴 -->
+                            <div class="absolute inset-0 opacity-[0.02]" style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0z\' fill=\'none\'/%3E%3Cpath d=\'M10 0v20M0 10h20\' stroke=\'%23000\' stroke-width=\'0.5\'/%3E%3C/svg%3E');"></div>
+                            
+                            <!-- 초기 메시지 -->
+                            <div class="relative text-center py-12">
+                                <div class="inline-block">
+                                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
+                                        <i class="fas fa-comments text-white text-2xl"></i>
+                                    </div>
+                                    <h4 class="text-lg font-bold text-gray-800 mb-2">대화를 시작하세요</h4>
+                                    <p class="text-sm text-gray-500">궁금한 점을 자유롭게 질문해주세요</p>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- 입력 영역 -->
-                        <div class="bg-white border border-gray-300 rounded-b-xl p-4">
-                            <div class="flex gap-3">
-                                <input 
-                                    type="text" 
-                                    id="chat-input" 
-                                    placeholder="메시지를 입력하세요..."
-                                    class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
-                                    onkeypress="if(event.key === 'Enter') sendChatMessage()"
-                                >
-                                <button onclick="sendChatMessage()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
-                                    <i class="fas fa-paper-plane mr-2"></i>전송
-                                </button>
+                        <div class="relative bg-white border-t border-gray-200 rounded-b-2xl shadow-lg">
+                            <div class="p-5">
+                                <div class="flex gap-3 items-end">
+                                    <!-- 입력 필드 -->
+                                    <div class="flex-1 relative">
+                                        <input 
+                                            type="text" 
+                                            id="chat-input" 
+                                            placeholder="메시지를 입력하세요..."
+                                            class="w-full rounded-xl border-2 border-gray-200 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 px-5 py-3.5 pr-12 transition-all duration-300 text-gray-800 placeholder-gray-400"
+                                            onkeypress="if(event.key === 'Enter') sendChatMessage()"
+                                        >
+                                        <!-- 입력 필드 아이콘 -->
+                                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                            <i class="fas fa-keyboard text-sm"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 전송 버튼 -->
+                                    <button onclick="sendChatMessage()" class="group relative overflow-hidden px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                        <div class="relative flex items-center gap-2">
+                                            <i class="fas fa-paper-plane"></i>
+                                            <span class="font-semibold">전송</span>
+                                        </div>
+                                    </button>
+                                </div>
+                                
+                                <!-- 힌트 텍스트 -->
+                                <div class="mt-3 flex items-center justify-center gap-2 text-xs text-gray-400">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <span>Enter를 눌러 빠르게 전송하세요</span>
+                                </div>
                             </div>
                         </div>
                     </div>
