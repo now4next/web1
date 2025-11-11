@@ -904,10 +904,10 @@ async function selectAssistant(type) {
   
   // 헤더 업데이트
   const header = document.getElementById('assistant-header')
-  header.className = `bg-gradient-to-r ${profile.gradient} rounded-t-xl p-4 flex items-center justify-between`
+  header.className = `bg-gradient-to-r ${profile.gradient} rounded-t-xl p-3 flex items-center justify-between shadow-md`
   
   const avatar = document.getElementById('assistant-avatar')
-  avatar.innerHTML = `<i class="fas ${profile.icon} text-${profile.color}-600 text-xl"></i>`
+  avatar.innerHTML = `<i class="fas ${profile.icon} text-${profile.color}-600 text-lg"></i>`
   
   document.getElementById('assistant-name').textContent = profile.name
   

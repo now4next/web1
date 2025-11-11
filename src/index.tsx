@@ -2277,41 +2277,21 @@ app.get('/', (c) => {
                 <!-- 대화 영역 (초기 숨김) -->
                     <div id="chat-area" class="hidden">
                         <!-- 선택된 어시스턴트 헤더 -->
-                        <div id="assistant-header" class="relative overflow-hidden bg-white rounded-t-2xl shadow-md border-b-2 border-blue-100">
-                            <!-- 그라디언트 배경 -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 opacity-90"></div>
-                            
-                            <div class="relative p-5 flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <!-- 아바타 -->
-                                    <div class="relative">
-                                        <div id="assistant-avatar" class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg transform transition-transform duration-300 hover:scale-105 hover:rotate-3">
-                                            <i class="fas fa-robot text-blue-600 text-2xl"></i>
-                                        </div>
-                                        <!-- 온라인 상태 표시 -->
-                                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
-                                    </div>
-                                    
-                                    <!-- 어시스턴트 정보 -->
-                                    <div>
-                                        <h3 id="assistant-name" class="font-bold text-white text-xl mb-0.5 tracking-tight">AI 어시스턴트</h3>
-                                        <div class="flex items-center gap-2">
-                                            <div id="assistant-status" class="text-blue-50 text-sm font-medium">온라인</div>
-                                            <span class="text-blue-200 text-xs">•</span>
-                                            <span class="text-blue-50 text-xs">실시간 응답</span>
-                                        </div>
-                                    </div>
+                        <div id="assistant-header" class="bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-xl p-3 flex items-center justify-between shadow-md">
+                            <div class="flex items-center gap-3">
+                                <!-- 아바타 -->
+                                <div id="assistant-avatar" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md">
+                                    <i class="fas fa-robot text-blue-600 text-lg"></i>
                                 </div>
                                 
-                                <!-- 닫기 버튼 -->
-                                <button onclick="resetAssistant()" class="group flex items-center gap-2 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5 transition-all duration-300 hover:scale-105">
-                                    <i class="fas fa-arrow-left text-sm"></i>
-                                    <span class="font-medium text-sm">다른 어시스턴트 선택</span>
-                                </button>
+                                <!-- 어시스턴트 이름 -->
+                                <h3 id="assistant-name" class="font-bold text-white text-lg">AI 어시스턴트</h3>
                             </div>
                             
-                            <!-- 하단 장식 라인 -->
-                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                            <!-- 닫기 버튼 -->
+                            <button onclick="resetAssistant()" class="text-white hover:bg-white/20 rounded-lg px-3 py-1.5 transition-colors text-sm">
+                                <i class="fas fa-times mr-1"></i>닫기
+                            </button>
                         </div>
                         
                         <!-- 채팅 컨테이너 -->
