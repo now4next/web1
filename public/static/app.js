@@ -2420,7 +2420,8 @@ function renderAssessmentPage() {
   const nav = document.getElementById('assessment-nav')
   if (!container || !nav) return
   
-  const perPage = questionsPerPage === -1 ? assessmentQuestions.length : questionsPerPage
+  // null 또는 -1이면 전체 표시
+  const perPage = (questionsPerPage === null || questionsPerPage === -1) ? assessmentQuestions.length : questionsPerPage
   const totalPages = Math.ceil(assessmentQuestions.length / perPage)
   const startIdx = currentAssessmentPage * perPage
   const endIdx = Math.min(startIdx + perPage, assessmentQuestions.length)
@@ -2483,7 +2484,8 @@ function renderAssessmentPage() {
 
 // 역량 진단 페이지 이동
 function navigateAssessmentPage(direction) {
-  const perPage = questionsPerPage === -1 ? assessmentQuestions.length : questionsPerPage
+  // null 또는 -1이면 전체 표시
+  const perPage = (questionsPerPage === null || questionsPerPage === -1) ? assessmentQuestions.length : questionsPerPage
   const startIdx = currentAssessmentPage * perPage
   const endIdx = Math.min(startIdx + perPage, assessmentQuestions.length)
   
@@ -2813,6 +2815,11 @@ async function startAssessment() {
 function renderQuestionsPage() {
   const container = document.getElementById('questions-container')
   
+  console.log('📋 renderQuestionsPage called')
+  console.log('questionsPerPage:', questionsPerPage)
+  console.log('assessmentQuestions.length:', assessmentQuestions.length)
+  console.log('currentPage:', currentPage)
+  
   // 페이지에 표시할 문항 계산
   let startIdx, endIdx
   
@@ -2820,12 +2827,15 @@ function renderQuestionsPage() {
     // 전체 표시 (null은 전체 버튼, -1은 레거시)
     startIdx = 0
     endIdx = assessmentQuestions.length
+    console.log('✅ 전체 표시 모드: startIdx=0, endIdx=' + endIdx)
   } else {
     startIdx = currentPage * questionsPerPage
     endIdx = Math.min(startIdx + questionsPerPage, assessmentQuestions.length)
+    console.log('📄 페이지 모드: startIdx=' + startIdx + ', endIdx=' + endIdx)
   }
   
   const pageQuestions = assessmentQuestions.slice(startIdx, endIdx)
+  console.log('pageQuestions.length:', pageQuestions.length)
   
   // 문항 HTML 생성
   container.innerHTML = pageQuestions.map((q, localIdx) => {
