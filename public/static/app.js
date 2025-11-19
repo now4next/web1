@@ -2290,7 +2290,8 @@ async function composeAssessment() {
     return
   }
   
-  if (questionsPerPage === null || questionsPerPage === undefined) {
+  // questionsPerPage는 undefined(미선택), null(전체), 또는 숫자(페이지당 문항 수)
+  if (questionsPerPage === undefined) {
     alert('진단 문항 디스플레이 설정을 선택해주세요')
     return
   }
@@ -2722,7 +2723,8 @@ async function startAssessment() {
     return
   }
   
-  if (questionsPerPage === null || questionsPerPage === undefined) {
+  // questionsPerPage는 undefined(미선택), null(전체), 또는 숫자(페이지당 문항 수)
+  if (questionsPerPage === undefined) {
     alert('진단 문항 디스플레이 설정을 선택해주세요')
     return
   }
@@ -2814,8 +2816,8 @@ function renderQuestionsPage() {
   // 페이지에 표시할 문항 계산
   let startIdx, endIdx
   
-  if (questionsPerPage === -1) {
-    // 전체 표시
+  if (questionsPerPage === null || questionsPerPage === -1) {
+    // 전체 표시 (null은 전체 버튼, -1은 레거시)
     startIdx = 0
     endIdx = assessmentQuestions.length
   } else {
@@ -2881,8 +2883,8 @@ function updateNavigationButtons() {
   const nextBtn = document.getElementById('next-btn')
   const submitBtn = document.getElementById('submit-btn')
   
-  // 전체 표시 모드인 경우
-  if (questionsPerPage === -1) {
+  // 전체 표시 모드인 경우 (null은 전체 버튼, -1은 레거시)
+  if (questionsPerPage === null || questionsPerPage === -1) {
     prevBtn.classList.add('hidden')
     nextBtn.classList.add('hidden')
     
