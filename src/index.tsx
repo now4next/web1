@@ -1895,6 +1895,7 @@ app.get('/', (c) => {
                                 id="competency-search" 
                                 placeholder="예: 커뮤니케이션, 리더십, 전략적사고"
                                 class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                onfocus="checkLoginForSearch()"
                                 onkeypress="if(event.key === 'Enter') searchCompetencies()"
                             >
                             <button onclick="searchCompetencies()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">

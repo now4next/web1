@@ -1,0 +1,9 @@
+name = "aiassess"
+compatibility_date = "2025-10-28"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aiassess-db"
+database_id = "c6247a63-ee1f-4536-b0af-9ae1588c0e23"

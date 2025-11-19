@@ -77,9 +77,30 @@ function goToHome() {
 // Phase 1: 진단 설계
 // ============================================================================
 
+// 검색 전 로그인 체크
+function checkLoginForSearch() {
+  const sessionToken = localStorage.getItem('sessionToken')
+  if (!sessionToken) {
+    // 입력 필드 포커스 해제
+    document.getElementById('competency-search').blur()
+    alert('로그인이 필요한 기능입니다.')
+    showLoginModal()
+    return false
+  }
+  return true
+}
+
 // 역량 검색
 async function searchCompetencies() {
   console.log('searchCompetencies called')
+  
+  // 로그인 체크
+  const sessionToken = localStorage.getItem('sessionToken')
+  if (!sessionToken) {
+    alert('로그인이 필요한 기능입니다.')
+    showLoginModal()
+    return
+  }
   
   const inputEl = document.getElementById('competency-search')
   const resultsDiv = document.getElementById('search-results')
