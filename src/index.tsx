@@ -61,27 +61,24 @@ app.get('/api/competencies/search', async (c) => {
     
     const query = c.req.query('q') || ''
     
-    // Search across competencies, jobs, and behavioral_indicators
+    // Search across competencies and behavioral_indicators
     // Use DISTINCT to avoid duplicate results when multiple indicators match
     const { results } = await db.prepare(`
       SELECT DISTINCT 
         c.id,
-        c.name as keyword,
-        c.definition as description,
-        c.job_id,
-        j.name as job_name,
-        j.description as job_description,
+        c.keyword,
+        c.description,
+        c.job_name,
+        c.model_id,
         c.created_at
       FROM competencies c
-      JOIN jobs j ON c.job_id = j.id
       LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
-      WHERE c.name LIKE ? 
-        OR c.definition LIKE ? 
-        OR j.name LIKE ?
-        OR j.description LIKE ?
+      WHERE c.keyword LIKE ? 
+        OR c.description LIKE ? 
+        OR c.job_name LIKE ?
         OR bi.indicator_text LIKE ?
-      ORDER BY c.sort_order ASC, c.created_at DESC
-    `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
+      ORDER BY c.created_at DESC
+    `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
     
     return c.json({ success: true, data: results })
   } catch (error) {
