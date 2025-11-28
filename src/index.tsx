@@ -63,22 +63,48 @@ app.get('/api/competencies/search', async (c) => {
     
     // Search across competencies and behavioral_indicators
     // Use DISTINCT to avoid duplicate results when multiple indicators match
-    const { results } = await db.prepare(`
-      SELECT DISTINCT 
-        c.id,
-        c.keyword,
-        c.description,
-        c.job_name,
-        c.model_id,
-        c.created_at
-      FROM competencies c
-      LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
-      WHERE c.keyword LIKE ? 
-        OR c.description LIKE ? 
-        OR c.job_name LIKE ?
-        OR bi.indicator_text LIKE ?
-      ORDER BY c.created_at DESC
-    `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
+    // Try to detect schema by checking if name column exists
+    let results
+    try {
+      // Try production schema first (with jobs table)
+      const prodResult = await db.prepare(`
+        SELECT DISTINCT 
+          c.id,
+          c.name as keyword,
+          c.definition as description,
+          j.name as job_name,
+          c.job_id as model_id,
+          c.created_at
+        FROM competencies c
+        LEFT JOIN jobs j ON c.job_id = j.id
+        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
+        WHERE c.name LIKE ? 
+          OR c.definition LIKE ? 
+          OR j.name LIKE ?
+          OR bi.indicator_text LIKE ?
+        ORDER BY c.sort_order ASC, c.created_at DESC
+      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
+      results = prodResult.results
+    } catch (prodError) {
+      // Fall back to local schema (without jobs table)
+      const localResult = await db.prepare(`
+        SELECT DISTINCT 
+          c.id,
+          c.keyword,
+          c.description,
+          c.job_name,
+          c.model_id,
+          c.created_at
+        FROM competencies c
+        LEFT JOIN behavioral_indicators bi ON c.id = bi.competency_id
+        WHERE c.keyword LIKE ? 
+          OR c.description LIKE ? 
+          OR c.job_name LIKE ?
+          OR bi.indicator_text LIKE ?
+        ORDER BY c.created_at DESC
+      `).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all()
+      results = localResult.results
+    }
     
     return c.json({ success: true, data: results })
   } catch (error) {
