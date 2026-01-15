@@ -1697,7 +1697,7 @@ function renderAnalysisReport(data) {
     </div>
     
     <!-- AI 코칭/컨설팅 배너 (결과 분석 화면) -->
-    <div class="group bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+    <div class="group bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer" onclick="showTab('action')">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div class="flex gap-2">
@@ -1720,7 +1720,6 @@ function renderAnalysisReport(data) {
           </div>
         </div>
         <button 
-          onclick="window.open('https://www.genspark.ai', '_blank')"
           class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap group-hover:scale-110 group-hover:shadow-xl">
           시작하기
           <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform duration-300"></i>
