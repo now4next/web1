@@ -1697,33 +1697,33 @@ function renderAnalysisReport(data) {
     </div>
     
     <!-- AI 코칭/컨설팅 배너 (결과 분석 화면) -->
-    <div class="bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg">
+    <div class="group bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div class="flex gap-2">
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-briefcase text-white text-xl"></i>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110">
+              <i class="fas fa-briefcase text-white text-xl group-hover:rotate-12 transition-transform duration-300"></i>
             </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-user-tie text-white text-xl"></i>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110" style="transition-delay: 50ms">
+              <i class="fas fa-user-tie text-white text-xl group-hover:rotate-12 transition-transform duration-300"></i>
             </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110" style="transition-delay: 100ms">
+              <i class="fas fa-chalkboard-teacher text-white text-xl group-hover:rotate-12 transition-transform duration-300"></i>
             </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-graduation-cap text-white text-xl"></i>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110" style="transition-delay: 150ms">
+              <i class="fas fa-graduation-cap text-white text-xl group-hover:rotate-12 transition-transform duration-300"></i>
             </div>
           </div>
           <div class="text-white">
-            <h3 class="text-xl font-bold mb-1">AI 코칭/컨설팅 받기</h3>
+            <h3 class="text-xl font-bold mb-1 group-hover:scale-105 transition-transform duration-300">AI 코칭/컨설팅 받기</h3>
             <p class="text-sm text-white/90">전문 AI 어시스턴트가 맞춤형 코칭과 컨설팅을 제공합니다</p>
           </div>
         </div>
         <button 
           onclick="window.open('https://www.genspark.ai', '_blank')"
-          class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap">
+          class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap group-hover:scale-110 group-hover:shadow-xl">
           시작하기
-          <i class="fas fa-arrow-right"></i>
+          <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform duration-300"></i>
         </button>
       </div>
     </div>
@@ -1921,7 +1921,7 @@ function showGenerateButton(respondentId) {
         <i class="fas fa-brain mr-2"></i>AI 인사이트
       </h4>
     </div>
-    <div class="text-center py-8 mb-6">
+    <div class="text-center py-8">
       <p class="text-gray-600 mb-4">AI 분석을 통해 맞춤형 인사이트와 발전 방향을 제공합니다</p>
       <button 
         onclick="generateAIInsights(${respondentId})"
@@ -1929,38 +1929,6 @@ function showGenerateButton(respondentId) {
         class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold shadow-lg">
         <i class="fas fa-magic mr-2"></i>AI 인사이트 생성
       </button>
-    </div>
-    
-    <!-- AI 코칭/컨설팅 배너 -->
-    <div class="bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex gap-2">
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-briefcase text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-user-tie text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-graduation-cap text-white text-xl"></i>
-            </div>
-          </div>
-          <div class="text-white">
-            <h3 class="text-xl font-bold mb-1">AI 코칭/컨설팅 받기</h3>
-            <p class="text-sm text-white/90">전문 AI 어시스턴트가 맞춤형 코칭과 컨설팅을 제공합니다</p>
-          </div>
-        </div>
-        <button 
-          onclick="window.open('https://www.genspark.ai', '_blank')"
-          class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap">
-          시작하기
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
     </div>
   `
 }
@@ -2086,7 +2054,7 @@ function displayInsights(insights, respondentId, isDemo = false, isCached = fals
     </div>
     
     <!-- 역량 개발 추천 -->
-    <div class="bg-white rounded-lg p-4 mb-6">
+    <div class="bg-white rounded-lg p-4">
       <h5 class="font-semibold text-gray-800 mb-3">
         <i class="fas fa-lightbulb text-blue-500 mr-2"></i>역량 개발 추천
       </h5>
@@ -2100,38 +2068,6 @@ function displayInsights(insights, respondentId, isDemo = false, isCached = fals
           </li>
         `).join('')}
       </ul>
-    </div>
-    
-    <!-- AI 코칭/컨설팅 배너 -->
-    <div class="bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex gap-2">
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-briefcase text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-user-tie text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
-            </div>
-            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <i class="fas fa-graduation-cap text-white text-xl"></i>
-            </div>
-          </div>
-          <div class="text-white">
-            <h3 class="text-xl font-bold mb-1">AI 코칭/컨설팅 받기</h3>
-            <p class="text-sm text-white/90">전문 AI 어시스턴트가 맞춤형 코칭과 컨설팅을 제공합니다</p>
-          </div>
-        </div>
-        <button 
-          onclick="window.open('https://www.genspark.ai', '_blank')"
-          class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap">
-          시작하기
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
     </div>
   `
 }
