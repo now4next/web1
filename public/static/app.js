@@ -1684,7 +1684,7 @@ function renderAnalysisReport(data) {
     </div>
     
     <!-- AI 인사이트 -->
-    <div id="ai-insights" class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 p-6">
+    <div id="ai-insights" class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
       <div class="flex items-center justify-between mb-4">
         <h4 class="text-lg font-semibold text-purple-800">
           <i class="fas fa-brain mr-2"></i>AI 인사이트
@@ -1693,6 +1693,38 @@ function renderAnalysisReport(data) {
       <div class="text-center py-8">
         <i class="fas fa-spinner fa-spin text-3xl text-purple-600 mb-2"></i>
         <p class="text-gray-600">AI 인사이트를 불러오는 중...</p>
+      </div>
+    </div>
+    
+    <!-- AI 코칭/컨설팅 배너 (결과 분석 화면) -->
+    <div class="bg-gradient-to-r from-orange-400 via-pink-500 to-pink-600 rounded-xl p-6 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex gap-2">
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <i class="fas fa-briefcase text-white text-xl"></i>
+            </div>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <i class="fas fa-user-tie text-white text-xl"></i>
+            </div>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
+            </div>
+            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <i class="fas fa-graduation-cap text-white text-xl"></i>
+            </div>
+          </div>
+          <div class="text-white">
+            <h3 class="text-xl font-bold mb-1">AI 코칭/컨설팅 받기</h3>
+            <p class="text-sm text-white/90">전문 AI 어시스턴트가 맞춤형 코칭과 컨설팅을 제공합니다</p>
+          </div>
+        </div>
+        <button 
+          onclick="window.open('https://www.genspark.ai', '_blank')"
+          class="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap">
+          시작하기
+          <i class="fas fa-arrow-right"></i>
+        </button>
       </div>
     </div>
   `
