@@ -346,14 +346,54 @@ app.post('/api/ai/generate-questions', async (c) => {
       const errorText = await response.text()
       console.error('OpenAI API Error:', errorText)
       
-      // 지역 제한 오류 처리
+      // 지역 제한 오류 처리 - 데모 데이터 반환
       if (errorText.includes('unsupported_country_region_territory')) {
+        console.log('Region restricted, returning demo data')
+        const demoData = {
+          behavioral_indicators: body.competency_keywords.map(keyword => ({
+            competency: keyword,
+            indicators: [
+              `${keyword} 관련 업무를 체계적으로 수행한다`,
+              `${keyword}을 활용하여 팀 목표 달성에 기여한다`,
+              `${keyword} 역량을 지속적으로 개발하고 향상시킨다`
+            ]
+          })),
+          questions: body.competency_keywords.flatMap(keyword => [
+            {
+              competency: keyword,
+              question_text: `나는 ${keyword} 역량을 효과적으로 발휘하고 있다`,
+              question_type: body.question_type
+            },
+            {
+              competency: keyword,
+              question_text: `나는 ${keyword}과 관련된 업무를 자신있게 수행할 수 있다`,
+              question_type: body.question_type
+            },
+            {
+              competency: keyword,
+              question_text: `나는 ${keyword} 역량 개발을 위해 지속적으로 노력한다`,
+              question_type: body.question_type
+            },
+            {
+              competency: keyword,
+              question_text: `나는 ${keyword}을 업무에 적극적으로 활용하고 있다`,
+              question_type: body.question_type
+            },
+            {
+              competency: keyword,
+              question_text: `나는 ${keyword}에 대한 전문성을 갖추고 있다`,
+              question_type: body.question_type
+            }
+          ]),
+          guide: `🔍 진단 안내\n\n본 진단은 ${body.competency_keywords.join(', ')} 역량을 평가하기 위한 ${body.question_type === 'self' ? '자가진단' : body.question_type === 'multi' ? '다면평가' : '설문조사'}입니다.\n\n✅ 목적:\n- 현재 역량 수준 파악\n- 강점과 개발영역 확인\n- 개인 성장 방향 설정\n\n⚠️ 유의사항:\n- 솔직하고 객관적으로 응답해주세요\n- 최근 6개월 동안의 경험을 바탕으로 평가하세요\n- 모든 문항에 빠짐없이 응답해주세요\n\n📋 프로세스:\n1. 진단 실시 (약 10-15분 소요)\n2. 결과 분석 및 리포트 생성\n3. AI 코칭 및 개발 계획 수립\n\n⚙️ 데모 모드: OpenAI API가 현재 지역에서 제한되어 있습니다. 관리자에게 프록시 설정을 요청하세요.`
+        }
+        
         return c.json({ 
-          success: false, 
-          error: 'OpenAI API는 현재 지역에서 사용할 수 없습니다. 관리자에게 문의하여 프록시 설정을 요청하세요.',
-          errorCode: 'REGION_NOT_SUPPORTED',
-          demo: true
-        }, 403)
+          success: true, 
+          data: demoData, 
+          demo: true,
+          message: 'OpenAI API는 현재 지역에서 사용할 수 없습니다. 데모 데이터로 기능을 체험해보세요.'
+        })
       }
       
       return c.json({ success: false, error: `OpenAI API 오류: ${errorText}` }, 500)
@@ -1569,25 +1609,42 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
         const errorText = await response.text()
         console.error('OpenAI API Error:', errorText)
         
-        // 지역 제한 오류 처리
+        // 지역 제한 오류 처리 - 데모 인사이트 사용
         if (errorText.includes('unsupported_country_region_territory')) {
-          throw new Error('REGION_NOT_SUPPORTED')
+          console.log('Region restricted, using demo insights')
+          insights = {
+            overall: `${body.respondent.name}님의 전체 평균 점수는 ${body.summary.overallAverage}점으로, 전반적으로 우수한 역량 수준을 보이고 있습니다.`,
+            strengths: `특히 ${body.summary.strengths.join(', ')} 역량에서 강점을 보이고 있습니다. 이러한 강점을 더욱 발전시켜 조직의 핵심 인재로 성장할 수 있습니다.`,
+            improvements: `${body.summary.improvements.join(', ')} 역량은 개선이 필요한 영역입니다. 체계적인 학습과 실무 경험을 통해 향상시킬 수 있습니다.`,
+            recommendations: [
+              '강점 역량을 활용한 프로젝트 참여 기회 확대',
+              '개선 영역에 대한 맞춤형 교육 프로그램 수강',
+              '멘토링을 통한 실무 노하우 습득',
+              '정기적인 피드백 세션으로 지속적 성장'
+            ]
+          }
+          isDemo = true
+          // 에러를 던지지 않고 계속 진행
+        } else {
+          throw new Error('OpenAI API 오류')
         }
-        throw new Error('OpenAI API 오류')
-      }
-      
-      const data = await response.json() as any
-      const rawInsights = JSON.parse(data.choices[0].message.content)
-      
-      // OpenAI 응답 형식을 프론트엔드 형식으로 변환
-      insights = {
-        overall: rawInsights.overall?.evaluation || rawInsights.overall || '분석 결과가 없습니다.',
-        strengths: rawInsights.strengths?.analysis || rawInsights.strengths || '강점 분석 결과가 없습니다.',
-        improvements: rawInsights.improvements?.analysis || rawInsights.improvements || '개선 영역 분석 결과가 없습니다.',
-        recommendations: rawInsights.recommendations || []
+      } else {
+        const data = await response.json() as any
+        const rawInsights = JSON.parse(data.choices[0].message.content)
+        
+        // OpenAI 응답 형식을 프론트엔드 형식으로 변환
+        insights = {
+          overall: rawInsights.overall?.evaluation || rawInsights.overall || '분석 결과가 없습니다.',
+          strengths: rawInsights.strengths?.analysis || rawInsights.strengths || '강점 분석 결과가 없습니다.',
+          improvements: rawInsights.improvements?.analysis || rawInsights.improvements || '개선 영역 분석 결과가 없습니다.',
+          recommendations: rawInsights.recommendations || []
+        }
       }
     } catch (error: any) {
-      return c.json({ success: false, error: error.message }, 500)
+      // 지역 제한 오류는 이미 처리했으므로 다른 오류만 반환
+      if (!isDemo) {
+        return c.json({ success: false, error: error.message }, 500)
+      }
     }
   }
   
