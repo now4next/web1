@@ -322,7 +322,10 @@ app.post('/api/ai/generate-questions', async (c) => {
 }`
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // OpenAI API 엔드포인트 (프록시 URL이 있으면 사용)
+    const apiEndpoint = c.env.OPENAI_PROXY_URL || 'https://api.openai.com/v1/chat/completions'
+    
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -340,8 +343,20 @@ app.post('/api/ai/generate-questions', async (c) => {
     })
     
     if (!response.ok) {
-      const error = await response.text()
-      return c.json({ success: false, error: `OpenAI API 오류: ${error}` }, 500)
+      const errorText = await response.text()
+      console.error('OpenAI API Error:', errorText)
+      
+      // 지역 제한 오류 처리
+      if (errorText.includes('unsupported_country_region_territory')) {
+        return c.json({ 
+          success: false, 
+          error: 'OpenAI API는 현재 지역에서 사용할 수 없습니다. 관리자에게 문의하여 프록시 설정을 요청하세요.',
+          errorCode: 'REGION_NOT_SUPPORTED',
+          demo: true
+        }, 403)
+      }
+      
+      return c.json({ success: false, error: `OpenAI API 오류: ${errorText}` }, 500)
     }
     
     const data = await response.json() as any
@@ -1530,7 +1545,10 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
 각 항목은 한국어로 작성하고, 실용적이고 구체적인 내용으로 작성해주세요.`
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // OpenAI API 엔드포인트 (프록시 URL이 있으면 사용)
+      const apiEndpoint = c.env.OPENAI_PROXY_URL || 'https://api.openai.com/v1/chat/completions'
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1548,6 +1566,13 @@ ${body.analysis.map((a: any) => `- ${a.competency}: ${a.average}점 (${a.count}�
       })
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('OpenAI API Error:', errorText)
+        
+        // 지역 제한 오류 처리
+        if (errorText.includes('unsupported_country_region_territory')) {
+          throw new Error('REGION_NOT_SUPPORTED')
+        }
         throw new Error('OpenAI API 오류')
       }
       
@@ -1752,7 +1777,10 @@ app.post('/api/ai/coaching', async (c) => {
   }
   
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // OpenAI API 엔드포인트 (프록시 URL이 있으면 사용)
+    const apiEndpoint = c.env.OPENAI_PROXY_URL || 'https://api.openai.com/v1/chat/completions'
+    
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1766,8 +1794,35 @@ app.post('/api/ai/coaching', async (c) => {
     })
     
     if (!response.ok) {
-      const error = await response.text()
-      return c.json({ success: false, error: `OpenAI API 오류: ${error}` }, 500)
+      const errorText = await response.text()
+      console.error('OpenAI API Error:', errorText)
+      
+      // 지역 제한 오류 처리 - 데모 응답 반환
+      if (errorText.includes('unsupported_country_region_territory')) {
+        const lastMessage = body.messages[body.messages.length - 1]
+        const demoResponse = `죄송합니다. OpenAI API가 현재 지역에서 제한되어 있습니다.
+
+"${lastMessage.content}" 에 대한 일반적인 조언을 드립니다:
+
+역량 개발은 지속적인 과정입니다. 다음과 같은 방법을 추천드립니다:
+
+1. **자기 평가**: 현재 수준을 객관적으로 파악하세요
+2. **목표 설정**: SMART 목표를 설정하세요
+3. **실천 계획**: 작은 단계부터 시작하여 꾸준히 실행하세요
+4. **피드백**: 동료나 상사로부터 정기적인 피드백을 받으세요
+5. **학습**: 관련 도서, 강의, 멘토링을 활용하세요
+
+⚠️ 관리자에게 문의하여 프록시 설정을 요청하시면 전체 AI 기능을 이용하실 수 있습니다.`
+        
+        return c.json({ 
+          success: true, 
+          message: demoResponse,
+          demo: true,
+          regionRestricted: true
+        })
+      }
+      
+      return c.json({ success: false, error: `OpenAI API 오류: ${errorText}` }, 500)
     }
     
     const data = await response.json() as any

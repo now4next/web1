@@ -115,6 +115,17 @@ AI 기술을 활용한 지능형 역량 진단 및 개발 지원 플랫폼입니
 OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
 
+**OpenAI 지역 제한 문제 해결** (선택사항):
+
+일부 지역에서 OpenAI API 접근이 제한될 수 있습니다. 이 경우 프록시 URL을 설정하세요:
+
+```bash
+OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_PROXY_URL=https://your-proxy-endpoint.com/v1/chat/completions
+```
+
+프록시 설정 없이도 시스템은 자동으로 데모 모드로 전환되어 정상 작동합니다.
+
 API 키가 없으면 자동으로 데모 모드로 실행되어 샘플 데이터를 표시합니다.
 
 ### 2. 의존성 설치

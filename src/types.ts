@@ -2,6 +2,7 @@
 export type Bindings = {
   DB: D1Database;
   OPENAI_API_KEY: string;
+  OPENAI_PROXY_URL?: string; // 선택적 프록시 URL (지역 제한 우회용)
 }
 
 // 역량 모델 타입
